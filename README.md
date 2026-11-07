@@ -1,8 +1,9 @@
 <div  style="align-items: center;">
           <span class="brand-mark">
-            <img src="./public/touch-logo.png" alt="touch-logo" width="68" height="36" />
+            <img src="./public/touch-logo.png" alt="touch-logo" width="200" height="200" />
           </span>
 </div>
+
 # Touch El-Zanouki Business Intelligence
 
 Touch El-Zanouki Business Intelligence is the read-only, Arabic- and
