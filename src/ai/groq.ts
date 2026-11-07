@@ -3,6 +3,7 @@ import type { Logger } from '../logger';
 import type { FetchLike } from '../d365/auth';
 import type {
   AICompletion,
+  AIModelCapabilities,
   AIMessage,
   AIProvider,
   AIRequestOptions,
@@ -11,16 +12,25 @@ import type {
   ToolResultMessage,
 } from './types';
 
-export interface GroqProviderOptions {
+export interface OpenAICompatibleProviderOptions {
+  name?: string;
   apiKey?: string;
+  allowUnauthenticated?: boolean;
   baseUrl: string;
   model: string;
   temperature: number;
   timeoutMs: number;
   maxCompletionTokens?: number;
+  maxTokenParameter?: 'max_tokens' | 'max_completion_tokens';
+  maxRateLimitRetries?: number;
+  maxTransientErrorRetries?: number;
+  priority?: number;
+  capabilities?: AIModelCapabilities;
   fetchImpl?: FetchLike;
   logger?: Logger;
 }
+
+export type GroqProviderOptions = OpenAICompatibleProviderOptions;
 
 interface GroqToolCall {
   id?: unknown;
@@ -51,14 +61,13 @@ interface GroqResponse {
     message?: string;
     type?: string;
     code?: string | number;
+    status?: string;
   };
 }
 
-const MAX_RATE_LIMIT_RETRIES = 2;
 const MAX_AUTOMATIC_RETRY_DELAY_SECONDS = 60;
 const MAX_TOTAL_RATE_LIMIT_WAIT_MS = 60_000;
 const MAX_TOOL_ERROR_RETRIES = 1;
-const MAX_TRANSIENT_ERROR_RETRIES = 2;
 
 function retryDelaySeconds(response: Response, upstreamMessage: string): number {
   const delays: number[] = [];
@@ -84,17 +93,18 @@ function retryDelaySeconds(response: Response, upstreamMessage: string): number 
   }
 
   const tokenReset = response.headers.get('x-ratelimit-reset-tokens');
-  const resetDelay = tokenReset
-    ? /(\d+(?:\.\d+)?)\s*(ms|s|m)/i.exec(tokenReset)
-    : null;
-  if (resetDelay) {
-    const amount = Number(resetDelay[1]);
-    const seconds = resetDelay[2]?.toLowerCase() === 'm'
-      ? amount * 60
-      : resetDelay[2]?.toLowerCase() === 'ms'
-        ? amount / 1_000
-        : amount;
-    delays.push(Math.max(0, Math.ceil(seconds)));
+  const requestReset = response.headers.get('x-ratelimit-reset-requests');
+  for (const reset of [tokenReset, requestReset]) {
+    const resetDelay = reset ? /(\d+(?:\.\d+)?)\s*(ms|s|m)/i.exec(reset) : null;
+    if (resetDelay) {
+      const amount = Number(resetDelay[1]);
+      const seconds = resetDelay[2]?.toLowerCase() === 'm'
+        ? amount * 60
+        : resetDelay[2]?.toLowerCase() === 'ms'
+          ? amount / 1_000
+          : amount;
+      delays.push(Math.max(0, Math.ceil(seconds)));
+    }
   }
   return delays.length > 0 ? Math.max(...delays) : 15;
 }
@@ -166,23 +176,44 @@ function errorMessage(payload: GroqResponse): string {
   return typeof payload.error?.message === 'string' ? payload.error.message : '';
 }
 
-export class GroqProvider implements AIProvider {
-  readonly name = 'groq';
+function errorCode(payload: GroqResponse): string {
+  return String(payload.error?.code ?? '').toLowerCase();
+}
+
+function isQuotaExhausted(response: Response, payload: GroqResponse, message: string): boolean {
+  const code = errorCode(payload);
+  return (
+    /quota|resource_exhausted|insufficient_quota|billing_hard_limit|daily.?limit|monthly.?limit/i.test(
+      `${code} ${payload.error?.type ?? ''} ${payload.error?.status ?? ''} ${message}`,
+    ) ||
+    response.headers.get('x-ratelimit-remaining-requests') === '0'
+  );
+}
+
+export class OpenAICompatibleProvider implements AIProvider {
+  readonly name: string;
   readonly model: string;
-  private readonly options: Required<Omit<GroqProviderOptions, 'logger' | 'apiKey' | 'fetchImpl' | 'maxCompletionTokens'>> & {
+  readonly priority?: number;
+  readonly capabilities?: AIModelCapabilities;
+  private readonly options: OpenAICompatibleProviderOptions & {
     apiKey?: string;
     fetchImpl: FetchLike;
-    maxCompletionTokens?: number;
-    logger?: Logger;
+    maxRateLimitRetries: number;
+    maxTransientErrorRetries: number;
   };
 
-  constructor(options: GroqProviderOptions) {
+  constructor(options: OpenAICompatibleProviderOptions) {
     this.options = {
       ...options,
       baseUrl: options.baseUrl.replace(/\/+$/, ''),
       fetchImpl: options.fetchImpl ?? fetch,
+      maxRateLimitRetries: options.maxRateLimitRetries ?? 0,
+      maxTransientErrorRetries: options.maxTransientErrorRetries ?? 0,
     };
+    this.name = options.name ?? 'openai-compatible';
     this.model = options.model;
+    this.priority = options.priority;
+    this.capabilities = options.capabilities;
   }
 
   async generateResponse(messages: AIMessage[], options: AIRequestOptions = {}): Promise<AICompletion> {
@@ -220,11 +251,10 @@ export class GroqProvider implements AIProvider {
     toolErrorRetries = 0,
     transientErrorRetries = 0,
   ): Promise<AICompletion> {
-    if (!this.options.apiKey) {
+    if (!this.options.apiKey && !this.options.allowUnauthenticated) {
       throw new AIProviderError({
         code: 'AI_AUTH_ERROR',
-        publicMessage:
-          'The AI provider is not configured. Set GROQ_API_KEY on the server to enable chat.',
+        publicMessage: 'The AI provider is not configured. Set a server-side provider API key to enable chat.',
       });
     }
 
@@ -238,8 +268,11 @@ export class GroqProvider implements AIProvider {
       body.tools = tools;
       body.tool_choice = 'auto';
     }
-    if (this.options.maxCompletionTokens) {
-      body.max_completion_tokens = this.options.maxCompletionTokens;
+    const maxCompletionTokens = options.maxCompletionTokens
+      ? Math.min(options.maxCompletionTokens, this.options.maxCompletionTokens ?? options.maxCompletionTokens)
+      : this.options.maxCompletionTokens;
+    if (maxCompletionTokens) {
+      body[this.options.maxTokenParameter ?? 'max_completion_tokens'] = maxCompletionTokens;
     }
 
     const started = Date.now();
@@ -248,7 +281,9 @@ export class GroqProvider implements AIProvider {
       response = await this.options.fetchImpl(`${this.options.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${this.options.apiKey}`,
+          ...(this.options.apiKey
+            ? { Authorization: `Bearer ${this.options.apiKey}` }
+            : {}),
           'Content-Type': 'application/json',
           Accept: 'application/json',
         },
@@ -263,15 +298,15 @@ export class GroqProvider implements AIProvider {
         throw new AIProviderError({
           code: 'AI_UNAVAILABLE',
           publicMessage: 'The AI request timed out or was cancelled. Please try again.',
-          message: 'Groq request aborted',
+          message: `${this.name} request aborted`,
           cause: error,
         });
       }
-      this.options.logger?.warn('Groq network error', { error: (error as Error).name });
+      this.options.logger?.warn(`${this.name} network error`, { error: (error as Error).name });
       throw new AIProviderError({
         code: 'AI_UNAVAILABLE',
         publicMessage: 'Unable to reach the AI provider. Please try again shortly.',
-        message: 'Groq network error',
+        message: `${this.name} network error`,
         cause: error,
       });
     }
@@ -283,7 +318,7 @@ export class GroqProvider implements AIProvider {
       throw new AIProviderError({
         code: 'AI_UNAVAILABLE',
         publicMessage: 'Unable to read the AI provider response.',
-        message: 'Groq response read failed',
+        message: `${this.name} response read failed`,
         cause: error,
       });
     }
@@ -296,36 +331,50 @@ export class GroqProvider implements AIProvider {
     }
 
     if (!response.ok) {
-      this.options.logger?.warn('Groq request failed', {
+      this.options.logger?.warn(`${this.name} request failed`, {
         status: response.status,
         errorType: payload.error?.type,
         errorCode: payload.error?.code,
         durationMs: Date.now() - started,
       });
       const upstreamMessage = errorMessage(payload);
-      if (response.status === 401 || response.status === 403) {
+      if (
+        response.status === 401 ||
+        response.status === 403 ||
+        /api.?key.?invalid|invalid.?api.?key|unauthenticated|authentication.?failed/i.test(
+          `${errorCode(payload)} ${payload.error?.status ?? ''} ${upstreamMessage}`,
+        )
+      ) {
         throw new AIProviderError({
           code: 'AI_AUTH_ERROR',
-          publicMessage: 'The AI provider rejected the API key. Check GROQ_API_KEY on the server.',
-          message: `Groq returned ${response.status}`,
+          publicMessage: 'The AI provider rejected its API key. Check the server-side provider configuration.',
+          message: `${this.name} returned ${response.status}`,
         });
       }
       if (response.status === 404) {
         throw new AIProviderError({
           code: 'AI_MODEL_ERROR',
-          publicMessage: `The configured AI model "${this.options.model}" is not available. Check GROQ_MODEL.`,
-          message: 'Groq model not found',
+          publicMessage: `The configured AI model "${this.options.model}" is not available. Check the provider model configuration.`,
+          message: `${this.name} model not found`,
+        });
+      }
+      if (response.status === 402 && isQuotaExhausted(response, payload, upstreamMessage)) {
+        const retryAfterSeconds = retryDelaySeconds(response, upstreamMessage);
+        throw new AIProviderError({
+          code: 'AI_QUOTA_EXHAUSTED',
+          publicMessage: `The ${this.name} usage quota is exhausted. Please try another configured provider or retry in ${retryAfterSeconds} seconds.`,
+          retryAfterSeconds,
         });
       }
       if (response.status === 429) {
         const retryAfterSeconds = retryDelaySeconds(response, upstreamMessage);
         const delayMs = retryAfterSeconds * 1_000;
         if (
-          rateLimitRetries < MAX_RATE_LIMIT_RETRIES &&
+          rateLimitRetries < this.options.maxRateLimitRetries &&
           retryAfterSeconds <= MAX_AUTOMATIC_RETRY_DELAY_SECONDS &&
           totalRateLimitWaitMs + delayMs <= MAX_TOTAL_RATE_LIMIT_WAIT_MS
         ) {
-          this.options.logger?.info('Retrying Groq request after rate limit', {
+          this.options.logger?.info(`Retrying ${this.name} request after rate limit`, {
             retry: rateLimitRetries + 1,
             retryAfterSeconds,
             errorType: payload.error?.type,
@@ -344,12 +393,14 @@ export class GroqProvider implements AIProvider {
         }
 
         const retryInSeconds = Math.max(1, retryAfterSeconds);
-        const publicMessage =
-          payload.error?.type === 'tokens'
-            ? `The AI provider's per-minute token limit is temporarily exhausted. Please try again in ${retryInSeconds} seconds.`
-            : `The AI provider is temporarily rate limited. Please try again in ${retryInSeconds} seconds.`;
+        const quotaExhausted = isQuotaExhausted(response, payload, upstreamMessage);
+        const publicMessage = quotaExhausted
+          ? `The ${this.name} usage quota is exhausted. Please try another configured provider or retry in ${retryInSeconds} seconds.`
+          : payload.error?.type === 'tokens'
+            ? `The ${this.name} per-minute token limit is temporarily exhausted. Please try again in ${retryInSeconds} seconds.`
+            : `The ${this.name} provider is temporarily rate limited. Please try another provider or retry in ${retryInSeconds} seconds.`;
         throw new AIProviderError({
-          code: 'AI_RATE_LIMITED',
+          code: quotaExhausted ? 'AI_QUOTA_EXHAUSTED' : 'AI_RATE_LIMITED',
           publicMessage,
           retryAfterSeconds: retryInSeconds,
         });
@@ -362,7 +413,7 @@ export class GroqProvider implements AIProvider {
           code: 'AI_CONTEXT_LENGTH',
           publicMessage:
             'This conversation is too large for the AI model. Start a new chat or ask a narrower question.',
-          message: 'Groq context length exceeded',
+          message: `${this.name} context length exceeded`,
         });
       }
       if (
@@ -371,7 +422,7 @@ export class GroqProvider implements AIProvider {
         tools &&
         toolErrorRetries < MAX_TOOL_ERROR_RETRIES
       ) {
-        this.options.logger?.info('Retrying Groq tool-call generation once', {
+        this.options.logger?.info(`Retrying ${this.name} tool-call generation once`, {
           model: this.options.model,
           retry: toolErrorRetries + 1,
         });
@@ -392,16 +443,16 @@ export class GroqProvider implements AIProvider {
             payload.error?.code === 'tool_use_failed'
               ? 'The AI could not form a valid ERP lookup. Please rephrase the question or ask for one entity or calculation at a time.'
               : 'The AI rejected this request format. Please retry with a shorter or more specific question.',
-          message: `Groq rejected the request (${String(payload.error?.code ?? 'invalid_request')})`,
+          message: `${this.name} rejected the request (${String(payload.error?.code ?? 'invalid_request')})`,
         });
       }
       if (
         response.status >= 500 &&
         response.status <= 504 &&
-        transientErrorRetries < MAX_TRANSIENT_ERROR_RETRIES
+        transientErrorRetries < this.options.maxTransientErrorRetries
       ) {
         const delayMs = 1_000 * (transientErrorRetries + 1);
-        this.options.logger?.info('Retrying transient Groq server error', {
+        this.options.logger?.info(`Retrying transient ${this.name} server error`, {
           status: response.status,
           retry: transientErrorRetries + 1,
         });
@@ -422,7 +473,7 @@ export class GroqProvider implements AIProvider {
           response.status >= 500
             ? 'The AI service is temporarily unavailable after several attempts. Please try again shortly.'
             : `The AI service returned an unexpected response (${response.status}). Please try again with a more specific question.`,
-        message: `Groq returned ${response.status}`,
+        message: `${this.name} returned ${response.status}`,
       });
     }
 
@@ -431,7 +482,7 @@ export class GroqProvider implements AIProvider {
       throw new AIProviderError({
         code: 'AI_INVALID_RESPONSE',
         publicMessage: 'The AI provider returned an empty response. Please try again.',
-        message: 'Groq response had no message',
+        message: `${this.name} response had no message`,
       });
     }
 
@@ -444,6 +495,13 @@ export class GroqProvider implements AIProvider {
               .join('')
           : '';
     const toolCalls = normalizeToolCalls(choice.message.tool_calls);
+    if (!content.trim() && toolCalls.length === 0) {
+      throw new AIProviderError({
+        code: 'AI_INVALID_RESPONSE',
+        publicMessage: 'The AI provider returned an empty response. Please try again.',
+        message: `${this.name} response was empty`,
+      });
+    }
     const usage = payload.usage
       ? {
           ...(typeof payload.usage.prompt_tokens === 'number'
@@ -458,7 +516,7 @@ export class GroqProvider implements AIProvider {
         }
       : undefined;
 
-    this.options.logger?.debug('Groq completion received', {
+    this.options.logger?.debug(`${this.name} completion received`, {
       model: this.options.model,
       toolCalls: toolCalls.length,
       finishReason: typeof choice.finish_reason === 'string' ? choice.finish_reason : undefined,
@@ -471,6 +529,19 @@ export class GroqProvider implements AIProvider {
       toolCalls,
       ...(typeof choice.finish_reason === 'string' ? { finishReason: choice.finish_reason } : {}),
       ...(usage ? { usage } : {}),
+      model: this.model,
+      provider: this.name,
     };
+  }
+}
+
+export class GroqProvider extends OpenAICompatibleProvider {
+  constructor(options: GroqProviderOptions) {
+    super({
+      ...options,
+      name: options.name ?? 'groq',
+      maxRateLimitRetries: options.maxRateLimitRetries ?? 2,
+      maxTransientErrorRetries: options.maxTransientErrorRetries ?? 2,
+    });
   }
 }

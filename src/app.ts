@@ -112,7 +112,10 @@ export function createApp(services: AppServices): Express {
 
   app.get('/api/health', (req, res) => {
     const metadata = services.metadata.status();
-    const ready = metadata.loaded && services.aiConfigured && services.d365Configured;
+    const aiStatus = services.aiStatus();
+    const aiAvailable =
+      aiStatus.providers.length === 0 || aiStatus.providers.some((provider) => provider.available);
+    const ready = metadata.loaded && services.aiConfigured && aiAvailable && services.d365Configured;
     res.json({
       application: 'Touch El-Zanouki Business Intelligence',
       status: ready ? 'ok' : 'degraded',
@@ -122,7 +125,10 @@ export function createApp(services: AppServices): Express {
       readOnly: true,
       ai: {
         configured: services.aiConfigured,
-        model: config.ai.model,
+        model:
+          aiStatus.providers.find((provider) => provider.name === aiStatus.activeProvider)?.model ??
+          services.agent.model,
+        ...aiStatus,
       },
       d365: {
         configured: services.d365Configured,

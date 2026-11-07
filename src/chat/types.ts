@@ -1,10 +1,13 @@
 import type { Attachment, DataContextEntry, SourceReference } from '../ai/attachments';
-import type { AIUsage } from '../ai/types';
+import type { AIUsage, AITask } from '../ai/types';
 
 export type ChatRole = 'user' | 'assistant';
 
 export interface ChatMessageMeta {
   model?: string;
+  provider?: string;
+  task?: AITask;
+  fallbackUsed?: boolean;
   durationMs?: number;
   iterations?: number;
   toolsUsed?: string[];

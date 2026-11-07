@@ -103,7 +103,7 @@ describe('createConfig', () => {
     const config = createConfig({});
     expect(config.warnings.some((warning) => warning.includes('D365_BASE_URL'))).toBe(true);
     expect(config.warnings.some((warning) => warning.includes('No D365 credentials'))).toBe(true);
-    expect(config.warnings.some((warning) => warning.includes('GROQ_API_KEY'))).toBe(true);
+    expect(config.warnings.some((warning) => warning.includes('No AI provider is configured'))).toBe(true);
     expect(config.d365.baseUrl).toBe('');
     expect(config.ai.apiKey).toBeUndefined();
   });
@@ -177,12 +177,107 @@ describe('createConfig', () => {
   it('uses token-efficient Groq defaults and bounds completion tokens', () => {
     const config = createConfig(testEnv());
     expect(config.ai.maxCompletionTokens).toBe(1_024);
+    expect(config.ai.maxTurnCompletionTokens).toBe(4_096);
     expect(config.ai.maxHistoryMessages).toBe(6);
     expect(config.ai.maxToolResultRows).toBe(20);
     expect(config.ai.maxSchemaFields).toBe(60);
 
     const configured = createConfig(testEnv({ GROQ_MAX_COMPLETION_TOKENS: '9000' }));
     expect(configured.ai.maxCompletionTokens).toBe(8_192);
+  });
+
+  it('accepts secure OpenAI-compatible fallback providers', () => {
+    const config = createConfig(
+      testEnv({
+        AI_FALLBACK_PROVIDERS: JSON.stringify([
+          {
+            name: 'free-tier',
+            apiKey: 'fallback-key',
+            baseUrl: 'https://api.example.ai/v1/',
+            model: 'tool-model',
+            supportsTools: true,
+          },
+        ]),
+      }),
+    );
+    expect(config.ai.providers[1]).toMatchObject({
+        name: 'free-tier',
+        apiKey: 'fallback-key',
+        baseUrl: 'https://api.example.ai/v1',
+        model: 'tool-model',
+        supportsTools: true,
+        freeTier: 'unknown',
+      });
+  });
+
+  it('rejects insecure or incomplete fallback provider configurations', () => {
+    expect(() =>
+      createConfig(
+        testEnv({
+          AI_FALLBACK_PROVIDERS: JSON.stringify([
+            { apiKey: 'key', baseUrl: 'http://api.example.ai/v1', model: 'model' },
+          ]),
+        }),
+      ),
+    ).toThrow(/must use HTTPS/);
+    expect(() =>
+      createConfig(testEnv({ AI_FALLBACK_PROVIDERS: '{"apiKey":"key"}' })),
+    ).toThrow(/JSON array/);
+  });
+
+  it('builds a priority-ordered multi-provider model registry from environment variables', () => {
+    const config = createConfig(
+      testEnv({
+        AI_PRIMARY_PROVIDER: 'gemini',
+        AI_PROVIDER_ORDER: 'gemini,cerebras,groq',
+        AI_FALLBACK_ENABLED: 'true',
+        AI_MAX_RETRIES: '2',
+        AI_REQUEST_TIMEOUT: '12000',
+        GEMINI_API_KEY: 'gemini-key',
+        GEMINI_MODEL: 'gemini-flash',
+        GEMINI_SUPPORTS_TOOLS: 'true',
+        CEREBRAS_API_KEY: 'cerebras-key',
+        CEREBRAS_MODEL: 'qwen-model',
+      }),
+    );
+
+    expect(config.ai.providers.map((provider) => provider.name)).toEqual([
+      'gemini',
+      'cerebras',
+      'groq',
+    ]);
+    expect(config.ai.primaryProvider).toBe('gemini');
+    expect(config.ai.maxRetries).toBe(2);
+    expect(config.ai.timeoutMs).toBe(12_000);
+    expect(config.ai.providers[0]).toMatchObject({
+      baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+      maxTokenParameter: 'max_tokens',
+      freeTier: 'unknown',
+      supportsTools: true,
+    });
+  });
+
+  it('allows local Ollama without a key and does not assume hosted HTTP is safe', () => {
+    const config = createConfig(
+      testEnv({
+        GROQ_API_KEY: undefined,
+        AI_FALLBACK_PROVIDERS: JSON.stringify([
+          {
+            name: 'ollama',
+            baseUrl: 'http://localhost:11434/v1',
+            model: 'qwen2.5:7b',
+            priority: 0,
+          },
+        ]),
+      }),
+    );
+    expect(config.ai.providers).toMatchObject([
+      { name: 'ollama', allowUnauthenticated: true, model: 'qwen2.5:7b' },
+    ]);
+  });
+
+  it('requires a model identifier when an optional provider key is configured', () => {
+    expect(() => createConfig(testEnv({ GEMINI_API_KEY: 'key' }))).toThrow(/GEMINI_MODEL is required/);
   });
 
   it('forces read-only mode even when disabled in the environment', () => {

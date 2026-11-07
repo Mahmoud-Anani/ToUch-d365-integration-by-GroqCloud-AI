@@ -7,7 +7,8 @@ import { MetadataService } from './metadata/service';
 import { QueryBuilder } from './query/builder';
 import { AnalyticsEngine } from './analytics/analytics';
 import { ToolRegistry } from './ai/tools';
-import { GroqProvider } from './ai/groq';
+import { OpenAICompatibleProvider } from './ai/groq';
+import { AIService, type AIServiceStatus } from './ai/fallback';
 import { Agent } from './ai/agent';
 import type { AIProvider } from './ai/types';
 import type { MetadataCatalogData } from './metadata/types';
@@ -31,6 +32,7 @@ export interface AppServices {
   analytics: AnalyticsEngine;
   tools: ToolRegistry;
   agent: Agent;
+  aiStatus: () => AIServiceStatus;
   chat: ChatService;
   conversationStore: ConversationStore;
   aiConfigured: boolean;
@@ -124,18 +126,35 @@ export function createRuntime(config: AppConfig, options: RuntimeOptions = {}): 
   const analytics = new AnalyticsEngine(client, metadata, queryBuilder, config);
   const tools = new ToolRegistry(metadata, queryBuilder, client, analytics, config, logger);
 
-  const provider =
-    options.aiProvider ??
-    new GroqProvider({
-      apiKey: config.ai.apiKey,
-      baseUrl: config.ai.baseUrl,
-      model: config.ai.model,
-      temperature: config.ai.temperature,
-      timeoutMs: config.ai.timeoutMs,
-      maxCompletionTokens: config.ai.maxCompletionTokens,
-      ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
+  const configuredProviders = config.ai.providers.map(
+    (provider) =>
+      new OpenAICompatibleProvider({
+        ...provider,
+        temperature: config.ai.temperature,
+        timeoutMs: config.ai.timeoutMs,
+        maxCompletionTokens: config.ai.maxCompletionTokens,
+        capabilities: {
+          supportsTools: provider.supportsTools,
+          tasks: provider.tasks,
+          freeTier: provider.freeTier,
+          ...(provider.contextWindow ? { contextWindow: provider.contextWindow } : {}),
+        },
+        ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
+        logger,
+      }),
+  );
+  const aiService = new AIService(
+      configuredProviders,
+      {
+        fallbackEnabled: config.ai.fallbackEnabled,
+        maxRetries: config.ai.maxRetries,
+        cooldownMs: config.ai.providerCooldownMs,
+        maxCooldownMs: config.ai.providerMaxCooldownMs,
+        primaryProvider: config.ai.primaryProvider,
+      },
       logger,
-    });
+    );
+  const provider = options.aiProvider ?? aiService;
 
   const agent = new Agent(provider, tools, config, logger);
 
@@ -160,9 +179,10 @@ export function createRuntime(config: AppConfig, options: RuntimeOptions = {}): 
     analytics,
     tools,
     agent,
+    aiStatus: () => aiService.status(),
     chat,
     conversationStore,
-    aiConfigured: Boolean(config.ai.apiKey),
+    aiConfigured: configuredProviders.length > 0 || options.aiProvider !== undefined,
     d365Configured,
     d365AuthMode: token.mode,
     startedAt: Date.now(),

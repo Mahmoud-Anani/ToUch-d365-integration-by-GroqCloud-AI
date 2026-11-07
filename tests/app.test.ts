@@ -39,7 +39,32 @@ describe('HTTP API without user-entered application keys', () => {
     const health = await request(app).get('/api/health').expect(200);
     expect(health.body.application).toBe('Touch El-Zanouki Business Intelligence');
     expect(health.body.authRequired).toBe(false);
+    expect(health.body.ai).toMatchObject({
+      configured: true,
+      providers: [{ name: 'groq', requests: 0, successfulRequests: 0 }],
+    });
+    expect(JSON.stringify(health.body.ai)).not.toContain('test-groq-key');
     await request(app).get('/api/conversations').expect(200);
+  });
+
+  it('uses a configured fallback provider when the primary key is absent', async () => {
+    const config = testConfig({
+      GROQ_API_KEY: undefined,
+      AI_FALLBACK_PROVIDERS: JSON.stringify([
+        {
+          name: 'backup',
+          apiKey: 'backup-key',
+          baseUrl: 'https://api.example.ai/v1',
+          model: 'backup-model',
+        },
+      ]),
+    });
+    const { logger } = testLogger();
+    const services = createRuntime(config, { initialCatalog: catalogData(), logger });
+
+    expect(services.aiConfigured).toBe(true);
+    const health = await request(createApp(services)).get('/api/health').expect(200);
+    expect(health.body.ai).toMatchObject({ configured: true, model: 'backup-model' });
   });
 
   it('isolates conversations when a trusted proxy supplies user identity', async () => {

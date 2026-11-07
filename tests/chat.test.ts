@@ -43,6 +43,9 @@ function agentResult(overrides: Partial<AgentResult> = {}): AgentResult {
     toolsUsed: ['analyzeData'],
     durationMs: 123,
     model: 'fake-model',
+    provider: 'fake-provider',
+    task: 'general_question',
+    fallbackUsed: false,
     complete: true,
     ...overrides,
   };

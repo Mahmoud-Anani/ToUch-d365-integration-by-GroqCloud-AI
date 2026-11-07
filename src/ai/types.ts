@@ -37,11 +37,30 @@ export interface AICompletion {
   toolCalls: AIToolCall[];
   finishReason?: string;
   usage?: AIUsage;
+  model?: string;
+  provider?: string;
+}
+
+export type AITask =
+  | 'production_analysis'
+  | 'manufacturing_efficiency_analysis'
+  | 'waste_defect_detection'
+  | 'root_cause_analysis'
+  | 'general_question'
+  | 'data_summarization';
+
+export interface AIModelCapabilities {
+  contextWindow?: number;
+  supportsTools: boolean;
+  tasks: AITask[];
+  freeTier: 'verified' | 'unknown' | 'paid';
 }
 
 export interface AIRequestOptions {
   temperature?: number;
   signal?: AbortSignal;
+  maxCompletionTokens?: number;
+  task?: AITask;
   /** When true the provider must not offer/execute tools (used for a final summary). */
   disableTools?: boolean;
 }
@@ -59,6 +78,9 @@ export interface ToolResultMessage {
 export interface AIProvider {
   readonly name: string;
   readonly model: string;
+  readonly priority?: number;
+  readonly capabilities?: AIModelCapabilities;
+  readonly primaryProviderName?: string;
   generateResponse(messages: AIMessage[], options?: AIRequestOptions): Promise<AICompletion>;
   generateWithTools(
     messages: AIMessage[],

@@ -248,6 +248,9 @@ export class ChatService {
       ...(result.sources.length > 0 ? { sources: result.sources } : {}),
       meta: {
         model: result.model,
+        provider: result.provider,
+        task: result.task,
+        fallbackUsed: result.fallbackUsed,
         durationMs: result.durationMs,
         iterations: result.iterations,
         toolsUsed: result.toolsUsed,
