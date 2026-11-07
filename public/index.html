@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en" dir="ltr" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta
+      name="description"
+      content="Touch El-Zanouki Business Intelligence: a read-only assistant for Touch home-appliance business data."
+    />
+    <meta name="theme-color" content="#fff8f7" id="theme-color-meta" />
+    <title>Touch El-Zanouki | Business Intelligence</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#message-input" data-i18n="skip"
+      >Skip to message input</a
+    >
+
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar" aria-label="Conversation history">
+        <div class="brand">
+          <span class="brand-mark">
+            <img
+              src="./touch-logo.png"
+              alt="touch-logo"
+              width="68"
+              height="36"
+            />
+          </span>
+          <span class="brand-copy">
+            <strong data-i18n="brand">Touch El-Zanouki</strong>
+            <small data-i18n="brand_sub"
+              >Business intelligence · El-Zenouki Group</small
+            >
+          </span>
+          <button
+            class="icon-btn sidebar-close"
+            id="sidebar-close"
+            type="button"
+            aria-label="Close sidebar"
+            data-i18n-aria="close_sidebar"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+            >
+              <path d="M6 6l12 12M18 6 6 18"></path>
+            </svg>
+          </button>
+        </div>
+
+        <button class="new-chat" id="new-chat" type="button">
+          <svg
+            viewBox="0 0 24 24"
+            width="18"
+            height="18"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          >
+            <path d="M12 5v14M5 12h14"></path>
+          </svg>
+          <span data-i18n="new_chat">New conversation</span>
+        </button>
+
+        <div class="sidebar-section">
+          <div class="section-head">
+            <span data-i18n="history">History</span>
+            <button
+              class="icon-btn"
+              id="refresh-conversations"
+              type="button"
+              aria-label="Refresh conversations"
+              data-i18n-aria="refresh_conversations"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M20 12a8 8 0 1 1-2.34-5.66"></path>
+                <path d="M20 4v5h-5"></path>
+              </svg>
+            </button>
+          </div>
+          <nav
+            class="conversation-list"
+            id="conversation-list"
+            aria-label="Conversations"
+          ></nav>
+        </div>
+
+        <div class="sidebar-footer">
+          <div class="metadata-pill" id="metadata-pill" title="Metadata status">
+            <span class="dot" aria-hidden="true"></span>
+            <span id="metadata-text" data-i18n="metadata_loading"
+              >Loading metadata…</span
+            >
+          </div>
+          <div class="footer-actions">
+            <button
+              class="text-btn"
+              id="refresh-metadata"
+              type="button"
+              data-i18n="refresh_metadata"
+            >
+              Refresh metadata
+            </button>
+          </div>
+          <p class="sidebar-note" data-i18n="read_only_note">
+            Read-only access. No ERP records can be changed.
+          </p>
+        </div>
+      </aside>
+
+      <div class="backdrop" id="sidebar-backdrop" hidden></div>
+
+      <main class="main">
+        <header class="topbar">
+          <button
+            class="icon-btn menu-toggle"
+            id="menu-toggle"
+            type="button"
+            aria-label="Open sidebar"
+            data-i18n-aria="open_sidebar"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="21"
+              height="21"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+            >
+              <path d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+          </button>
+          <div class="title-block">
+            <h1 id="chat-title" data-i18n="new_chat">New conversation</h1>
+            <p id="chat-subtitle" data-i18n="subtitle_default">
+              Touch home-appliance business intelligence
+            </p>
+          </div>
+          <div class="topbar-actions">
+            <button
+              class="chip-btn"
+              id="lang-toggle"
+              type="button"
+              aria-label="Switch language"
+            >
+              العربية
+            </button>
+            <button
+              class="icon-btn"
+              id="theme-toggle"
+              type="button"
+              aria-label="Toggle theme"
+            >
+              <svg
+                class="icon-sun"
+                viewBox="0 0 24 24"
+                width="19"
+                height="19"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+              >
+                <circle cx="12" cy="12" r="4"></circle>
+                <path
+                  d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"
+                ></path>
+              </svg>
+              <svg
+                class="icon-moon"
+                viewBox="0 0 24 24"
+                width="19"
+                height="19"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"
+                ></path>
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        <section
+          class="messages"
+          id="messages"
+          role="log"
+          aria-live="polite"
+          aria-relevant="additions"
+        ></section>
+
+        <section class="empty-state" id="empty-state">
+          <div class="empty-inner">
+            <div class="empty-mark">
+              <img
+                src="./touch-logo.png"
+                alt="touch-logo"
+                width="124"
+                height="65"
+              />
+            </div>
+            <h2 data-i18n="empty_title">
+              A clearer view of the Touch business
+            </h2>
+            <p data-i18n="empty_body">
+              Ask about products, stock, sales, purchasing, and more. Touch
+              Business Intelligence checks live ERP data and shows where every
+              answer comes from—without changing records.
+            </p>
+            <div class="suggestions" id="suggestions"></div>
+            <p class="empty-hint" data-i18n="empty_hint">
+              Built around Touch appliances. Every business answer is grounded
+              in live ERP data; partial results are clearly labelled.
+            </p>
+          </div>
+        </section>
+
+        <section
+          class="status-panel"
+          id="status-panel"
+          hidden
+          aria-live="polite"
+        >
+          <div class="status-current">
+            <span class="spinner" aria-hidden="true"></span>
+            <span id="status-label" data-i18n="working">Working…</span>
+            <span class="status-detail" id="status-detail"></span>
+          </div>
+          <ol class="status-steps" id="status-steps"></ol>
+        </section>
+
+        <footer class="composer-wrap">
+          <form class="composer" id="composer" autocomplete="off">
+            <label class="sr-only" for="message-input" data-i18n="message_label"
+              >Message</label
+            >
+            <textarea
+              id="message-input"
+              name="message"
+              rows="1"
+              maxlength="4000"
+              placeholder="Ask about customers, inventory, purchase orders…"
+              data-i18n-placeholder="composer_placeholder"
+            ></textarea>
+            <div class="composer-bar">
+              <span class="composer-hint" data-i18n="composer_hint"
+                >Enter to send · Shift+Enter for a new line</span
+              >
+              <span
+                class="char-count"
+                id="char-count"
+                aria-live="polite"
+              ></span>
+              <button
+                class="stop-btn"
+                id="stop-btn"
+                type="button"
+                hidden
+                data-i18n="stop"
+              >
+                Stop
+              </button>
+              <button
+                class="send-btn"
+                id="send-btn"
+                type="submit"
+                aria-label="Send message"
+                data-i18n-aria="send"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="19"
+                  height="19"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.9"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="m4 12 16-7-7 16-2.5-7.5z"></path>
+                  <path d="M10.5 13.5 20 5"></path>
+                </svg>
+              </button>
+            </div>
+          </form>
+          <p class="disclaimer" data-i18n="disclaimer">
+            Touch Business Intelligence · Read-only access. Verify important
+            business figures before acting on them.
+          </p>
+        </footer>
+      </main>
+    </div>
+
+    <div class="modal-backdrop" id="modal-backdrop" hidden>
+      <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+        aria-describedby="modal-body"
+      >
+        <h2 id="modal-title"></h2>
+        <p id="modal-body"></p>
+        <div class="modal-field" id="modal-field" hidden>
+          <label for="modal-input" id="modal-input-label"></label>
+          <input id="modal-input" type="text" autocomplete="off" />
+          <p class="field-error" id="modal-error" hidden></p>
+        </div>
+        <div class="modal-actions">
+          <button
+            class="secondary-btn"
+            id="modal-cancel"
+            type="button"
+            data-i18n="cancel"
+          >
+            Cancel
+          </button>
+          <button
+            class="primary-btn"
+            id="modal-confirm"
+            type="button"
+            data-i18n="confirm"
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>
