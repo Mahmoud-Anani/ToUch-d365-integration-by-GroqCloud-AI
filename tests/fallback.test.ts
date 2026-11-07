@@ -5,7 +5,6 @@ import { AIProviderError } from '../src/errors';
 
 const serviceOptions = {
   fallbackEnabled: true,
-  maxRetries: 6,
   cooldownMs: 1_000,
   maxCooldownMs: 10_000,
   primaryProvider: 'primary',
@@ -110,6 +109,91 @@ describe('AIService provider orchestration', () => {
     });
   });
 
+  it('tries every tool-capable model in priority order until one succeeds', async () => {
+    const models = [
+      provider('first', 'model-a', vi.fn(async () => ({ content: '', toolCalls: [] }))),
+      provider('second', 'model-b', vi.fn(async () => ({ content: '', toolCalls: [] }))),
+      provider('third', 'model-c', vi.fn(async () => ({ content: '', toolCalls: [] }))),
+      provider('fourth', 'model-d', vi.fn(async () => ({ content: '', toolCalls: [] }))),
+    ];
+    models[0]!.generateWithTools = vi.fn(async () => {
+      throw unavailable('AI_QUOTA_EXHAUSTED');
+    });
+    models[1]!.generateWithTools = vi.fn(async () => {
+      throw unavailable('AI_RATE_LIMITED');
+    });
+    models[2]!.generateWithTools = vi.fn(async () => {
+      throw unavailable('AI_AUTH_ERROR');
+    });
+    models[3]!.generateWithTools = vi.fn(async () => ({
+      content: 'Recovered on fourth model',
+      toolCalls: [],
+    }));
+    const service = new AIService(models, serviceOptions);
+
+    await expect(
+      service.generateWithTools(
+        [{ role: 'user', content: 'Question' }],
+        [{ type: 'function', function: { name: 'query', description: 'query', parameters: {} } }],
+        { task: 'general_question' },
+      ),
+    ).resolves.toMatchObject({
+      content: 'Recovered on fourth model',
+      provider: 'fourth',
+      model: 'model-d',
+    });
+    for (const model of models) expect(model.generateWithTools).toHaveBeenCalledOnce();
+    expect(service.status().fallbackHistory.map(({ from, to }) => [from, to])).toEqual([
+      ['first', 'second'],
+      ['second', 'third'],
+      ['third', 'fourth'],
+    ]);
+  });
+
+  it('tries all models when each one fails and reports that the sequence is exhausted', async () => {
+    const models = ['first', 'second', 'third', 'fourth'].map((name) =>
+      provider(name, `${name}-model`, vi.fn(async () => {
+        throw unavailable('AI_RATE_LIMITED');
+      })),
+    );
+    const service = new AIService(models, serviceOptions);
+
+    await expect(
+      service.generateResponse([{ role: 'user', content: 'Question' }]),
+    ).rejects.toMatchObject({
+      code: 'AI_RATE_LIMITED',
+      publicMessage: expect.stringContaining('All eligible AI models failed'),
+    });
+    for (const model of models) expect(model.generateResponse).toHaveBeenCalledOnce();
+  });
+
+  it('honors provider-supplied rate-limit reset times beyond the local backoff cap', async () => {
+    const rateLimited = provider(
+      'primary',
+      'model-a',
+      vi.fn(async () => {
+        throw new AIProviderError({
+          code: 'AI_RATE_LIMITED',
+          publicMessage: 'Rate limited',
+          retryAfterSeconds: 3_856,
+        });
+      }),
+    );
+    const fallback = provider(
+      'fallback',
+      'model-b',
+      vi.fn(async () => ({ content: 'Recovered', toolCalls: [] })),
+    );
+    const service = new AIService([rateLimited, fallback], serviceOptions);
+    const before = Date.now();
+
+    await expect(
+      service.generateResponse([{ role: 'user', content: 'Question' }]),
+    ).resolves.toMatchObject({ provider: 'fallback' });
+    const retryAt = Date.parse(service.status().providers[0]!.retryAt!);
+    expect(retryAt - before).toBeGreaterThanOrEqual(3_856_000);
+  });
+
   it('tries configured providers in priority order and reports when all fail', async () => {
     const providers = [
       provider('first', 'model-a', vi.fn(async () => { throw unavailable('AI_AUTH_ERROR'); })),
@@ -122,7 +206,7 @@ describe('AIService provider orchestration', () => {
       service.generateResponse([{ role: 'user', content: 'Question' }]),
     ).rejects.toMatchObject({
       code: 'AI_UNAVAILABLE',
-      publicMessage: expect.stringContaining('All configured AI providers failed'),
+      publicMessage: expect.stringContaining('All eligible AI models failed'),
     });
     for (const item of providers) expect(item.generateResponse).toHaveBeenCalledOnce();
   });
@@ -198,6 +282,46 @@ describe('AIService provider orchestration', () => {
       ),
     ).resolves.toMatchObject({ content: 'Available', provider: 'tools' });
     expect(textOnly.generateWithTools).not.toHaveBeenCalled();
+  });
+
+  it('explains when configured models are excluded from ERP tool-call fallback', async () => {
+    const primary = provider(
+      'primary',
+      'model-a',
+      vi.fn(async () => ({ content: '', toolCalls: [] })),
+    );
+    primary.generateWithTools = vi.fn(async () => {
+      throw unavailable('AI_RATE_LIMITED');
+    });
+    const skipped = [
+      provider(
+        'text-only-a',
+        'model-b',
+        vi.fn(async () => ({ content: '', toolCalls: [] })),
+        { supportsTools: false, tasks: ['general_question'], freeTier: 'unknown' },
+      ),
+      provider(
+        'text-only-b',
+        'model-c',
+        vi.fn(async () => ({ content: '', toolCalls: [] })),
+        { supportsTools: false, tasks: ['general_question'], freeTier: 'unknown' },
+      ),
+    ];
+    const service = new AIService([primary, ...skipped], serviceOptions);
+
+    await expect(
+      service.generateWithTools(
+        [{ role: 'user', content: 'Question' }],
+        [{ type: 'function', function: { name: 'query', description: 'query', parameters: {} } }],
+        { task: 'general_question' },
+      ),
+    ).rejects.toMatchObject({
+      code: 'AI_RATE_LIMITED',
+      publicMessage: expect.stringContaining(
+        '2 configured model(s) were skipped because tool calling is not enabled',
+      ),
+    });
+    for (const model of skipped) expect(model.generateWithTools).not.toHaveBeenCalled();
   });
 
   it('normalizes task-based generate responses and falls back on invalid output', async () => {

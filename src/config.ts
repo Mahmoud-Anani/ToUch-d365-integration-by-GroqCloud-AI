@@ -31,7 +31,6 @@ export interface AIConfig {
   primaryProvider: string;
   providerOrder: string[];
   fallbackEnabled: boolean;
-  maxRetries: number;
   providerCooldownMs: number;
   providerMaxCooldownMs: number;
   temperature: number;
@@ -512,7 +511,6 @@ export function createConfig(env: EnvLike = process.env): AppConfig {
       primaryProvider: providers[0]?.name ?? providerOrder[0] ?? 'groq',
       providerOrder,
       fallbackEnabled: bool(env, 'AI_FALLBACK_ENABLED', true),
-      maxRetries: clamp(int(env, 'AI_MAX_RETRIES', Math.max(0, providers.length - 1)), 0, 10),
       providerCooldownMs: clamp(int(env, 'AI_PROVIDER_COOLDOWN_MS', 5_000), 1_000, 300_000),
       providerMaxCooldownMs: clamp(int(env, 'AI_PROVIDER_MAX_COOLDOWN_MS', 300_000), 10_000, 3_600_000),
       temperature: Math.min(2, Math.max(0, Number(str(env, 'GROQ_TEMPERATURE', '0.2')) || 0.2)),

@@ -231,7 +231,6 @@ describe('createConfig', () => {
         AI_PRIMARY_PROVIDER: 'gemini',
         AI_PROVIDER_ORDER: 'gemini,cerebras,groq',
         AI_FALLBACK_ENABLED: 'true',
-        AI_MAX_RETRIES: '2',
         AI_REQUEST_TIMEOUT: '12000',
         GEMINI_API_KEY: 'gemini-key',
         GEMINI_MODEL: 'gemini-flash',
@@ -247,7 +246,6 @@ describe('createConfig', () => {
       'groq',
     ]);
     expect(config.ai.primaryProvider).toBe('gemini');
-    expect(config.ai.maxRetries).toBe(2);
     expect(config.ai.timeoutMs).toBe(12_000);
     expect(config.ai.providers[0]).toMatchObject({
       baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',

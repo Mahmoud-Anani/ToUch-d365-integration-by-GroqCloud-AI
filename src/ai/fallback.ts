@@ -59,7 +59,6 @@ export interface AIServiceStatus {
 
 export interface AIServiceOptions {
   fallbackEnabled: boolean;
-  maxRetries: number;
   cooldownMs: number;
   maxCooldownMs: number;
   primaryProvider?: string;
@@ -253,13 +252,19 @@ export class AIService implements AIProvider {
     if (eligible.length === 0) {
       throw new AIProviderError({
         code: 'AI_UNAVAILABLE',
-        publicMessage: 'No configured AI model supports this request.',
+        publicMessage: requiresTools
+          ? 'No configured AI model is enabled for tool calling. Enable tool support only for models confirmed to support function calling.'
+          : 'No configured AI model supports this request.',
       });
     }
-    const maxAttempts = this.options.fallbackEnabled
-      ? Math.min(eligible.length, Math.max(1, this.options.maxRetries + 1))
-      : 1;
-    const attempted = eligible.slice(0, maxAttempts);
+    const attempted = this.options.fallbackEnabled ? eligible : eligible.slice(0, 1);
+    const toolIneligibleCount = requiresTools
+      ? this.providers.filter(
+          (provider) =>
+            provider.capabilities?.supportsTools === false &&
+            (!provider.capabilities.tasks || provider.capabilities.tasks.includes(task)),
+        ).length
+      : 0;
     let firstQuota: AIProviderError | undefined;
     let firstRateLimit: AIProviderError | undefined;
     let lastError: AIProviderError | undefined;
@@ -360,19 +365,13 @@ export class AIService implements AIProvider {
         });
       }
     }
-    if (attempted.length < eligible.length || (!this.options.fallbackEnabled && eligible.length > 1)) {
-      throw new AIProviderError({
-        code: 'AI_UNAVAILABLE',
-        publicMessage:
-          'AI provider attempts failed before all configured fallbacks were tried. Increase AI_MAX_RETRIES or enable AI_FALLBACK_ENABLED.',
-        cause: lastError,
-      });
-    }
     if (firstQuota) {
       throw new AIProviderError({
         code: 'AI_QUOTA_EXHAUSTED',
-        publicMessage:
-          'All configured AI providers failed; at least one usage quota is exhausted. Please retry after the provider quota resets.',
+        publicMessage: this.exhaustedMessage(
+          'At least one model usage quota is exhausted.',
+          toolIneligibleCount,
+        ),
         retryAfterSeconds: firstQuota.retryAfterSeconds,
         cause: firstQuota,
       });
@@ -380,18 +379,24 @@ export class AIService implements AIProvider {
     if (firstRateLimit) {
       throw new AIProviderError({
         code: 'AI_RATE_LIMITED',
-        publicMessage:
-          'All configured AI providers failed; at least one provider is rate limited. Please retry after the limit resets.',
+        publicMessage: this.exhaustedMessage(
+          'At least one model is rate limited.',
+          toolIneligibleCount,
+        ),
         retryAfterSeconds: firstRateLimit.retryAfterSeconds,
         cause: firstRateLimit,
       });
     }
-    if (lastError && this.providers.length === 1) throw lastError;
+    if (lastError && (!this.options.fallbackEnabled || this.providers.length === 1)) {
+      throw lastError;
+    }
     if (lastError) {
       throw new AIProviderError({
         code: 'AI_UNAVAILABLE',
-        publicMessage:
-          'All configured AI providers failed. Check provider credentials and availability, then try again.',
+        publicMessage: this.exhaustedMessage(
+          'Check provider credentials and availability, then try again.',
+          toolIneligibleCount,
+        ),
         cause: lastError,
       });
     }
@@ -401,6 +406,13 @@ export class AIService implements AIProvider {
     });
   }
 
+  private exhaustedMessage(reason: string, toolIneligibleCount: number): string {
+    const skipped = toolIneligibleCount > 0
+      ? ` ${toolIneligibleCount} configured model(s) were skipped because tool calling is not enabled.`
+      : '';
+    return `All eligible AI models failed. ${reason}${skipped} Please check provider health and configuration.`;
+  }
+
   private coolDown(provider: AIProvider, state: ProviderStats, error: AIProviderError): void {
     const base = this.options.cooldownMs;
     const exponential = Math.min(
@@ -408,12 +420,15 @@ export class AIService implements AIProvider {
       base * 2 ** Math.min(state.consecutiveFailures - 1, 10),
     );
     let delayMs = exponential;
+    const providerRetryAfterMs = error.retryAfterSeconds
+      ? error.retryAfterSeconds * 1_000
+      : undefined;
     switch (error.code) {
       case 'AI_QUOTA_EXHAUSTED':
-        delayMs = Math.max(error.retryAfterSeconds ? error.retryAfterSeconds * 1_000 : 3_600_000, base);
+        delayMs = providerRetryAfterMs ?? 3_600_000;
         break;
       case 'AI_RATE_LIMITED':
-        delayMs = Math.max(error.retryAfterSeconds ? error.retryAfterSeconds * 1_000 : base, base);
+        delayMs = providerRetryAfterMs ?? exponential;
         break;
       case 'AI_AUTH_ERROR':
         delayMs = this.options.maxCooldownMs;
@@ -428,7 +443,11 @@ export class AIService implements AIProvider {
         delayMs = base;
         break;
     }
-    state.retryAt = Date.now() + Math.min(delayMs, this.options.maxCooldownMs);
+    const useProviderRetryAfter =
+      providerRetryAfterMs !== undefined &&
+      (error.code === 'AI_QUOTA_EXHAUSTED' || error.code === 'AI_RATE_LIMITED');
+    state.retryAt =
+      Date.now() + (useProviderRetryAfter ? providerRetryAfterMs : Math.min(delayMs, this.options.maxCooldownMs));
     state.unavailableReason =
       error.code === 'AI_QUOTA_EXHAUSTED'
         ? 'quota_exhausted'

@@ -147,7 +147,6 @@ export function createRuntime(config: AppConfig, options: RuntimeOptions = {}): 
       configuredProviders,
       {
         fallbackEnabled: config.ai.fallbackEnabled,
-        maxRetries: config.ai.maxRetries,
         cooldownMs: config.ai.providerCooldownMs,
         maxCooldownMs: config.ai.providerMaxCooldownMs,
         primaryProvider: config.ai.primaryProvider,

@@ -141,10 +141,9 @@ provider quota check.
 | `AI_PRIMARY_PROVIDER` | `groq` | Provider name to prioritize when configured. |
 | `AI_PROVIDER_ORDER` | `groq,gemini,cerebras,sambanova,openrouter,huggingface,ollama` | Stable fallback order; custom JSON entries can set `priority`. |
 | `AI_FALLBACK_ENABLED` | `true` | Try another available provider after a provider failure. |
-| `AI_MAX_RETRIES` | All configured providers | Maximum additional providers to try; blank derives the configured provider count. |
 | `AI_REQUEST_TIMEOUT` | `30000` | Per-provider request timeout in milliseconds. `GROQ_TIMEOUT_MS` remains a legacy fallback. |
 | `AI_PROVIDER_COOLDOWN_MS` | `5000` | Base cooldown for temporary provider failures; repeated failures use exponential backoff. |
-| `AI_PROVIDER_MAX_COOLDOWN_MS` | `300000` | Maximum in-memory circuit-breaker cooldown. A provider becomes eligible again when it expires. |
+| `AI_PROVIDER_MAX_COOLDOWN_MS` | `300000` | Maximum exponential circuit-breaker cooldown. Explicit upstream quota/rate-limit reset times are always honored. |
 | `GROQ_TEMPERATURE` | `0.2` | Generation temperature applied to configured providers. |
 | `GROQ_MAX_COMPLETION_TOKENS` | `1024` | Per-request output cap applied to configured providers. |
 | `AI_MAX_TURN_COMPLETION_TOKENS` | `4096` | Turn-wide generated-token budget, reserving room for a final answer. |
