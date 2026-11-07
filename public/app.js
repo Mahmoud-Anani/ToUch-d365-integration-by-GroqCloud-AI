@@ -14,13 +14,33 @@
       open_sidebar: 'Open sidebar',
       new_chat: 'New conversation',
       history: 'History',
+      workspace: 'Workspace',
+      overview: 'Overview',
+      recent_conversations: 'Recent conversations',
+      data_connection: 'Data connection',
       refresh_conversations: 'Refresh conversations',
       metadata_loading: 'Loading metadata…',
       refresh_metadata: 'Refresh metadata',
       read_only_note: 'Read-only access. No ERP records can be changed.',
-      subtitle_default: 'Touch home-appliance business intelligence',
+      subtitle_default: 'Live ERP insights for the Touch business',
       subtitle_messages: '{n} messages · updated {when}',
       empty_title: 'A clearer view of the Touch business',
+      dashboard_kicker: 'BUSINESS OVERVIEW',
+      dashboard_cta: 'Ask your first question',
+      workspace_status: 'Workspace status',
+      workspace_status_hint: 'A live view of the tools behind your answers',
+      read_only_badge: 'READ ONLY',
+      erp_source: 'ERP source',
+      ai_assistant: 'AI assistant',
+      business_catalog: 'Business catalog',
+      status_checking: 'Checking…',
+      status_configured: 'Configured',
+      status_setup: 'Setup required',
+      status_ready: 'Ready',
+      status_unavailable: 'Unavailable',
+      catalog_entities: '{n} queryable entities',
+      start_with: 'Start with a question',
+      suggestions_hint: 'Choose a topic to explore',
       empty_body:
         'Ask about products, stock, sales, purchasing, and more. Touch Business Intelligence checks live ERP data and shows where every answer comes from—without changing records.',
       empty_hint: 'Built around Touch appliances. Every business answer is grounded in live ERP data; partial results are clearly labelled.',
@@ -101,13 +121,33 @@
       open_sidebar: 'فتح الشريط الجانبي',
       new_chat: 'محادثة جديدة',
       history: 'السجل',
+      workspace: 'مساحة العمل',
+      overview: 'نظرة عامة',
+      recent_conversations: 'المحادثات الأخيرة',
+      data_connection: 'اتصال البيانات',
       refresh_conversations: 'تحديث المحادثات',
       metadata_loading: 'جارٍ تحميل البيانات الوصفية…',
       refresh_metadata: 'تحديث البيانات الوصفية',
       read_only_note: 'وصول للقراءة فقط. لا يمكن تعديل أي سجلات في النظام.',
-      subtitle_default: 'ذكاء أعمال الأجهزة المنزلية من Touch',
+      subtitle_default: 'رؤى مباشرة من نظام ERP لأعمال Touch',
       subtitle_messages: '{n} رسالة · آخر تحديث {when}',
       empty_title: 'رؤية أوضح لأعمال Touch',
+      dashboard_kicker: 'نظرة عامة على الأعمال',
+      dashboard_cta: 'اطرح سؤالك الأول',
+      workspace_status: 'حالة مساحة العمل',
+      workspace_status_hint: 'عرض مباشر للأدوات التي تدعم إجاباتك',
+      read_only_badge: 'للقراءة فقط',
+      erp_source: 'مصدر ERP',
+      ai_assistant: 'المساعد الذكي',
+      business_catalog: 'فهرس الأعمال',
+      status_checking: 'جارٍ التحقق…',
+      status_configured: 'تم الإعداد',
+      status_setup: 'الإعداد مطلوب',
+      status_ready: 'جاهز',
+      status_unavailable: 'غير متاح',
+      catalog_entities: '{n} كيان قابل للاستعلام',
+      start_with: 'ابدأ بسؤال',
+      suggestions_hint: 'اختر موضوعاً لاستكشافه',
       empty_body:
         'اسأل عن المنتجات والمخزون والمبيعات والمشتريات وغيرها. يتحقق ذكاء أعمال Touch من بيانات النظام الفعلية ويوضح مصدر كل إجابة دون تعديل أي سجل.',
       empty_hint: 'مخصص لأعمال أجهزة Touch. كل إجابة عن الأعمال تستند إلى بيانات ERP مباشرة، وتُوضّح النتائج الجزئية.',
@@ -218,16 +258,25 @@
   const dom = {
     html: document.documentElement,
     themeColor: $('theme-color-meta'),
+    connectionIndicator: $('connection-indicator'),
     sidebar: $('sidebar'),
     sidebarBackdrop: $('sidebar-backdrop'),
     sidebarClose: $('sidebar-close'),
     menuToggle: $('menu-toggle'),
     newChat: $('new-chat'),
+    overviewNav: $('overview-nav'),
+    dashboardAsk: $('dashboard-ask'),
     conversations: $('conversation-list'),
     refreshConversations: $('refresh-conversations'),
     metadataPill: $('metadata-pill'),
     metadataText: $('metadata-text'),
     refreshMetadata: $('refresh-metadata'),
+    erpStatus: $('erp-status'),
+    erpStatusDot: $('erp-status-dot'),
+    aiStatus: $('ai-status'),
+    aiStatusDot: $('ai-status-dot'),
+    catalogStatus: $('catalog-status'),
+    catalogStatusDot: $('catalog-status-dot'),
     chatTitle: $('chat-title'),
     chatSubtitle: $('chat-subtitle'),
     langToggle: $('lang-toggle'),
@@ -458,7 +507,7 @@
 
   function applyTheme() {
     dom.html.dataset.theme = state.theme;
-    dom.themeColor.setAttribute('content', state.theme === 'dark' ? '#191514' : '#fff8f7');
+    dom.themeColor.setAttribute('content', state.theme === 'dark' ? '#151d19' : '#f5f7f4');
     dom.themeToggle.setAttribute(
       'aria-label',
       state.theme === 'dark' ? (state.lang === 'ar' ? 'الوضع الفاتح' : 'Switch to light theme') : state.lang === 'ar' ? 'الوضع الداكن' : 'Switch to dark theme',
@@ -493,7 +542,7 @@
   }
 
   function updateTitle() {
-    dom.chatTitle.textContent = state.current ? state.current.title : t('new_chat');
+    dom.chatTitle.textContent = state.current ? state.current.title : t('overview');
     if (state.current) {
       dom.chatSubtitle.textContent = t('subtitle_messages', {
         n: state.current.messages.length,
@@ -507,6 +556,9 @@
   function setEmptyVisible(visible) {
     dom.empty.hidden = !visible;
     dom.messages.hidden = visible;
+    dom.overviewNav.classList.toggle('active', visible);
+    if (visible) dom.overviewNav.setAttribute('aria-current', 'page');
+    else dom.overviewNav.removeAttribute('aria-current');
   }
 
   function renderSuggestions() {
@@ -670,16 +722,71 @@
     return payload;
   }
 
+  function updateDashboardStatus() {
+    const setStatus = (label, dot, message, level) => {
+      label.textContent = message;
+      dot.classList.remove('ok', 'warn', 'error');
+      if (level) dot.classList.add(level);
+    };
+    const health = state.health;
+
+    if (!health) {
+      setStatus(dom.erpStatus, dom.erpStatusDot, t('status_checking'), '');
+      setStatus(dom.aiStatus, dom.aiStatusDot, t('status_checking'), '');
+      setStatus(dom.catalogStatus, dom.catalogStatusDot, t('status_checking'), '');
+      return;
+    }
+
+    const d365Ready = Boolean(health.d365 && health.d365.configured);
+    setStatus(
+      dom.erpStatus,
+      dom.erpStatusDot,
+      d365Ready ? t('status_configured') : t('status_setup'),
+      d365Ready ? 'ok' : 'error',
+    );
+
+    const ai = health.ai;
+    const aiAvailable =
+      Boolean(ai && ai.configured) &&
+      (!Array.isArray(ai.providers) ||
+        ai.providers.length === 0 ||
+        ai.providers.some((provider) => provider.available));
+    setStatus(
+      dom.aiStatus,
+      dom.aiStatusDot,
+      aiAvailable ? t('status_ready') : ai && ai.configured ? t('status_unavailable') : t('status_setup'),
+      aiAvailable ? 'ok' : 'error',
+    );
+
+    const metadata = health.metadata;
+    if (metadata && metadata.loaded) {
+      const count = metadata.queryableEntityCount ?? metadata.entityCount ?? 0;
+      const formattedCount = new Intl.NumberFormat(state.lang === 'ar' ? 'ar' : 'en').format(count);
+      setStatus(
+        dom.catalogStatus,
+        dom.catalogStatusDot,
+        t('catalog_entities', { n: formattedCount }),
+        metadata.stale ? 'warn' : 'ok',
+      );
+    } else {
+      setStatus(dom.catalogStatus, dom.catalogStatusDot, t('status_unavailable'), 'error');
+    }
+  }
+
   function updateMetaPill(metadata) {
+    updateDashboardStatus();
     dom.metadataPill.classList.remove('ok', 'warn', 'error');
     if (metadata && metadata.loaded) {
-      dom.metadataPill.classList.add(metadata.stale ? 'warn' : 'ok');
+      const status = metadata.stale ? 'warn' : 'ok';
+      dom.metadataPill.classList.add(status);
       dom.metadataText.textContent = metadata.stale
         ? t('metadata_stale')
         : t('metadata_ready', { n: metadata.queryableEntityCount ?? metadata.entityCount ?? 0 });
       dom.metadataPill.title = metadata.fetchedAt
         ? `${formatDateTime(metadata.fetchedAt)}${metadata.stale ? ' · stale' : ''}`
         : '';
+      dom.connectionIndicator.classList.remove('ok', 'warn', 'error');
+      dom.connectionIndicator.classList.add(status);
       return;
     }
     if (state.health && state.health.d365 && state.health.d365.configured === false) {
@@ -691,6 +798,10 @@
     }
     dom.metadataPill.title =
       state.health && Array.isArray(state.health.warnings) ? state.health.warnings.join(' ') : '';
+    dom.connectionIndicator.classList.remove('ok', 'warn', 'error');
+    dom.connectionIndicator.classList.add(
+      dom.metadataPill.classList.contains('error') ? 'error' : 'warn',
+    );
   }
 
   function renderConversations() {
@@ -1552,10 +1663,9 @@
       const data = await api('/api/conversations');
       state.conversations = Array.isArray(data && data.conversations) ? data.conversations : [];
       renderConversations();
-      if (state.conversations.length > 0 && !state.current) {
-        await loadConversation(state.conversations[0].id, { silent: true });
-      } else if (!state.current) {
-        newChat();
+      if (!state.current) {
+        setEmptyVisible(true);
+        updateTitle();
       }
       try {
         const metadata = await api('/api/metadata/status');
@@ -1604,6 +1714,8 @@
     });
 
     dom.newChat.addEventListener('click', newChat);
+    dom.overviewNav.addEventListener('click', newChat);
+    dom.dashboardAsk.addEventListener('click', () => dom.input.focus());
     dom.menuToggle.addEventListener('click', openSidebar);
     dom.sidebarClose.addEventListener('click', closeSidebar);
     dom.sidebarBackdrop.addEventListener('click', closeSidebar);

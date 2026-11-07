@@ -10,7 +10,7 @@
       name="description"
       content="Touch El-Zanouki Business Intelligence: a read-only assistant for Touch home-appliance business data."
     />
-    <meta name="theme-color" content="#fff8f7" id="theme-color-meta" />
+    <meta name="theme-color" content="#f5f7f4" id="theme-color-meta" />
     <title>Touch El-Zanouki | Business Intelligence</title>
     <link rel="icon" type="image/png" href="./touch-logo.png" />
     <link rel="stylesheet" href="./styles.css" />
@@ -73,9 +73,41 @@
           <span data-i18n="new_chat">New conversation</span>
         </button>
 
+        <nav
+          class="workspace-nav"
+          aria-label="Workspace"
+          data-i18n-aria="workspace"
+        >
+          <span class="section-label" data-i18n="workspace">Workspace</span>
+          <button
+            class="workspace-link"
+            id="overview-nav"
+            type="button"
+            aria-current="page"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <rect x="3" y="3" width="8" height="8" rx="2"></rect>
+              <rect x="13" y="3" width="8" height="5" rx="2"></rect>
+              <rect x="13" y="10" width="8" height="11" rx="2"></rect>
+              <rect x="3" y="13" width="8" height="8" rx="2"></rect>
+            </svg>
+            <span data-i18n="overview">Overview</span>
+          </button>
+        </nav>
+
         <div class="sidebar-section">
           <div class="section-head">
-            <span data-i18n="history">History</span>
+            <span data-i18n="recent_conversations">Recent conversations</span>
             <button
               class="icon-btn"
               id="refresh-conversations"
@@ -106,13 +138,27 @@
         </div>
 
         <div class="sidebar-footer">
-          <div class="metadata-pill" id="metadata-pill" title="Metadata status">
-            <span class="dot" aria-hidden="true"></span>
-            <span id="metadata-text" data-i18n="metadata_loading"
-              >Loading metadata…</span
+          <div class="connection-card">
+            <div class="connection-heading">
+              <span
+                class="connection-indicator"
+                id="connection-indicator"
+                aria-hidden="true"
+              ></span>
+              <span data-i18n="data_connection">Data connection</span>
+            </div>
+            <div
+              class="metadata-pill"
+              id="metadata-pill"
+              title="Metadata status"
+              role="status"
+              aria-live="polite"
             >
-          </div>
-          <div class="footer-actions">
+              <span class="dot" aria-hidden="true"></span>
+              <span id="metadata-text" data-i18n="metadata_loading"
+                >Loading metadata…</span
+              >
+            </div>
             <button
               class="text-btn"
               id="refresh-metadata"
@@ -122,8 +168,24 @@
               Refresh metadata
             </button>
           </div>
-          <p class="sidebar-note" data-i18n="read_only_note">
+          <p class="sidebar-note">
+            <svg
+              viewBox="0 0 24 24"
+              width="14"
+              height="14"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 3 5 6v5c0 4.5 3 7.5 7 10 4-2.5 7-5.5 7-10V6l-7-3Z"></path>
+              <path d="m9 12 2 2 4-4"></path>
+            </svg>
+            <span data-i18n="read_only_note">
             Read-only access. No ERP records can be changed.
+            </span>
           </p>
         </div>
       </aside>
@@ -216,27 +278,106 @@
 
         <section class="empty-state" id="empty-state">
           <div class="empty-inner">
-            <div class="empty-mark">
-              <img
-                src="./touch-logo.png"
-                alt="touch-logo"
-                width="124"
-                height="65"
-              />
+            <div class="dashboard-kicker">
+              <span class="dashboard-kicker-line" aria-hidden="true"></span>
+              <span data-i18n="dashboard_kicker">BUSINESS OVERVIEW</span>
             </div>
-            <h2 data-i18n="empty_title">
-              A clearer view of the Touch business
-            </h2>
-            <p data-i18n="empty_body">
-              Ask about products, stock, sales, purchasing, and more. Touch
-              Business Intelligence checks live ERP data and shows where every
-              answer comes from—without changing records.
-            </p>
+            <div class="dashboard-hero">
+              <div class="dashboard-copy">
+                <h2 data-i18n="empty_title">
+                  A clearer view of the Touch business
+                </h2>
+                <p data-i18n="empty_body">
+                  Ask about products, stock, sales, purchasing, and more. Touch
+                  Business Intelligence checks live ERP data and shows where every
+                  answer comes from—without changing records.
+                </p>
+                <button class="dashboard-cta" id="dashboard-ask" type="button">
+                  <span data-i18n="dashboard_cta">Ask your first question</span>
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="17"
+                    height="17"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M5 12h14M13 6l6 6-6 6"></path>
+                  </svg>
+                </button>
+              </div>
+              <div class="dashboard-art" aria-hidden="true">
+                <div class="art-orbit orbit-one"></div>
+                <div class="art-orbit orbit-two"></div>
+                <div class="art-spark spark-one"></div>
+                <div class="art-spark spark-two"></div>
+                <div class="art-mark">
+                  <img src="./touch-logo.png" alt="" width="124" height="65" />
+                </div>
+              </div>
+            </div>
+            <div class="dashboard-section-heading">
+              <div>
+                <h3 data-i18n="workspace_status">Workspace status</h3>
+                <p data-i18n="workspace_status_hint">
+                  A live view of the tools behind your answers
+                </p>
+              </div>
+              <span class="read-only-badge">
+                <span aria-hidden="true"></span>
+                <span data-i18n="read_only_badge">READ ONLY</span>
+              </span>
+            </div>
+            <div class="signal-grid" aria-live="polite">
+              <article class="signal-card">
+                <span class="signal-icon signal-erp" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 20V9l8-5 8 5v11"></path>
+                    <path d="M9 20v-6h6v6M8 10h.01M12 10h.01M16 10h.01"></path>
+                  </svg>
+                </span>
+                <span class="signal-copy">
+                  <span class="signal-label" data-i18n="erp_source">ERP source</span>
+                  <strong class="signal-value" id="erp-status" data-i18n="status_checking">Checking…</strong>
+                </span>
+                <span class="signal-dot" id="erp-status-dot" aria-hidden="true"></span>
+              </article>
+              <article class="signal-card">
+                <span class="signal-icon signal-ai" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 3v3m0 12v3M3 12h3m12 0h3"></path>
+                    <path d="m5.64 5.64 2.12 2.12m8.48 8.48 2.12 2.12m0-12.72-2.12 2.12m-8.48 8.48-2.12 2.12"></path>
+                    <circle cx="12" cy="12" r="4"></circle>
+                  </svg>
+                </span>
+                <span class="signal-copy">
+                  <span class="signal-label" data-i18n="ai_assistant">AI assistant</span>
+                  <strong class="signal-value" id="ai-status" data-i18n="status_checking">Checking…</strong>
+                </span>
+                <span class="signal-dot" id="ai-status-dot" aria-hidden="true"></span>
+              </article>
+              <article class="signal-card">
+                <span class="signal-icon signal-catalog" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 1 4 17.5z"></path>
+                    <path d="M4 17.5A2.5 2.5 0 0 1 6.5 15H20M8 7h8M8 10h5"></path>
+                  </svg>
+                </span>
+                <span class="signal-copy">
+                  <span class="signal-label" data-i18n="business_catalog">Business catalog</span>
+                  <strong class="signal-value" id="catalog-status" data-i18n="status_checking">Checking…</strong>
+                </span>
+                <span class="signal-dot" id="catalog-status-dot" aria-hidden="true"></span>
+              </article>
+            </div>
+            <div class="suggestion-heading">
+              <h3 data-i18n="start_with">Start with a question</h3>
+              <span data-i18n="suggestions_hint">Choose a topic to explore</span>
+            </div>
             <div class="suggestions" id="suggestions"></div>
-            <p class="empty-hint" data-i18n="empty_hint">
-              Built around Touch appliances. Every business answer is grounded
-              in live ERP data; partial results are clearly labelled.
-            </p>
           </div>
         </section>
 
