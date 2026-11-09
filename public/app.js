@@ -135,6 +135,10 @@
       analysis_groups: '{n} groups',
       analysis_scanned: '{n} records scanned',
       analysis_partial: 'Partial scan',
+      analysis_top_share: 'Top {key} · {pct}%',
+      chart_bar: 'Bars',
+      chart_donut: 'Donut',
+      chart_column: 'Columns',
       kpi_empty: 'Module counts are not available yet.',
       kpi_unavailable: 'Unavailable',
       modules_title: 'System modules',
@@ -298,6 +302,10 @@
       analysis_groups: '{n} مجموعة',
       analysis_scanned: 'تم فحص {n} سجل',
       analysis_partial: 'فحص جزئي',
+      analysis_top_share: 'الأعلى: {key} · {pct}%',
+      chart_bar: 'القضبان',
+      chart_donut: 'دائري',
+      chart_column: 'الأعمدة',
       kpi_empty: 'أعداد الوحدات غير متاحة بعد.',
       kpi_unavailable: 'غير متاح',
       modules_title: 'وحدات النظام',
@@ -967,6 +975,160 @@
     }
   }
 
+  const CHART_COLORS = ['#ff5659', '#a8c26e', '#2a9d8f', '#e9c46a', '#5b8e7d', '#4ea8de', '#9d7ea8'];
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+
+  function groupShare(groups, group) {
+    if (typeof group.share === 'number' && Number.isFinite(group.share)) return group.share;
+    const total = groups.reduce((sum, item) => sum + (Number(item.count) || 0), 0);
+    return total > 0 ? (Number(group.count) || 0) / total : 0;
+  }
+
+  function displayGroupKey(key) {
+    const text = key === null || key === undefined ? '' : String(key).trim();
+    return text === '' || text === '(blank)' ? '—' : text;
+  }
+
+  function formatShare(share) {
+    const pct = Math.round((Number(share) || 0) * 1000) / 10;
+    return Number.isInteger(pct) ? `${pct}%` : `${pct.toFixed(1)}%`;
+  }
+
+  function buildBarChart(groups) {
+    const list = document.createElement('ul');
+    list.className = 'bar-list';
+    const max = Math.max(...groups.map((group) => Number(group.count) || 0), 1);
+    for (const group of groups) {
+      const item = document.createElement('li');
+      item.className = 'bar-row';
+
+      const label = document.createElement('span');
+      label.className = 'bar-label';
+      label.textContent = displayGroupKey(group.key);
+      label.title = displayGroupKey(group.key);
+
+      const track = document.createElement('span');
+      track.className = 'bar-track';
+      const fill = document.createElement('span');
+      fill.className = 'bar-fill';
+      fill.style.width = `${Math.max(2, Math.round(((Number(group.count) || 0) / max) * 100))}%`;
+      track.append(fill);
+
+      const count = document.createElement('span');
+      count.className = 'bar-count';
+      count.textContent = `${formatCount(group.count)} · ${formatShare(groupShare(groups, group))}`;
+
+      item.append(label, track, count);
+      list.append(item);
+    }
+    return list;
+  }
+
+  function buildDonutChart(groups) {
+    const wrap = document.createElement('div');
+    wrap.className = 'donut-wrap';
+
+    const size = 120;
+    const radius = 42;
+    const circumference = 2 * Math.PI * radius;
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('viewBox', `0 0 ${size} ${size}`);
+    svg.setAttribute('class', 'donut-svg');
+    svg.setAttribute('role', 'img');
+    svg.setAttribute(
+      'aria-label',
+      groups.map((group) => `${displayGroupKey(group.key)} ${formatShare(groupShare(groups, group))}`).join(', '),
+    );
+
+    let start = 0;
+    groups.forEach((group, index) => {
+      const share = groupShare(groups, group);
+      if (share <= 0) return;
+      const length = share * circumference;
+      const circle = document.createElementNS(SVG_NS, 'circle');
+      circle.setAttribute('cx', size / 2);
+      circle.setAttribute('cy', size / 2);
+      circle.setAttribute('r', radius);
+      circle.setAttribute('fill', 'none');
+      circle.setAttribute('stroke-width', 20);
+      circle.setAttribute('stroke-dasharray', `${length} ${Math.max(circumference - length, 0)}`);
+      circle.setAttribute('stroke-dashoffset', -start);
+      circle.setAttribute('transform', `rotate(-90 ${size / 2} ${size / 2})`);
+      circle.setAttribute('class', `donut-seg seg-${index % CHART_COLORS.length}`);
+      svg.append(circle);
+      start += length;
+    });
+
+    const total = groups.reduce((sum, group) => sum + (Number(group.count) || 0), 0);
+    const totalText = document.createElementNS(SVG_NS, 'text');
+    totalText.setAttribute('x', size / 2);
+    totalText.setAttribute('y', size / 2 + 1);
+    totalText.setAttribute('text-anchor', 'middle');
+    totalText.setAttribute('class', 'donut-total');
+    totalText.textContent = formatCount(total);
+    svg.append(totalText);
+    wrap.append(svg);
+
+    const legend = document.createElement('ul');
+    legend.className = 'donut-legend';
+    groups.forEach((group, index) => {
+      const row = document.createElement('li');
+      row.className = 'legend-row';
+      const dot = document.createElement('span');
+      dot.className = `seg-dot seg-${index % CHART_COLORS.length}`;
+      const key = document.createElement('span');
+      key.className = 'legend-key';
+      key.textContent = displayGroupKey(group.key);
+      key.title = displayGroupKey(group.key);
+      const count = document.createElement('strong');
+      count.className = 'legend-count';
+      count.textContent = formatCount(group.count);
+      const pct = document.createElement('span');
+      pct.className = 'legend-pct';
+      pct.textContent = formatShare(groupShare(groups, group));
+      row.append(dot, key, count, pct);
+      legend.append(row);
+    });
+    wrap.append(legend);
+    return wrap;
+  }
+
+  function buildColumnChart(groups) {
+    const chart = document.createElement('div');
+    chart.className = 'col-chart';
+    chart.setAttribute('role', 'img');
+    chart.setAttribute(
+      'aria-label',
+      groups.map((group) => `${displayGroupKey(group.key)} ${formatCount(group.count)}`).join(', '),
+    );
+    const max = Math.max(...groups.map((group) => Number(group.count) || 0), 1);
+    groups.forEach((group, index) => {
+      const column = document.createElement('div');
+      column.className = 'col';
+      column.title = `${displayGroupKey(group.key)}: ${formatCount(group.count)} (${formatShare(groupShare(groups, group))})`;
+
+      const value = document.createElement('span');
+      value.className = 'col-value';
+      value.textContent = formatCount(group.count);
+
+      const lane = document.createElement('span');
+      lane.className = 'col-lane';
+      const fill = document.createElement('span');
+      fill.className = `col-fill seg-bg-${index % CHART_COLORS.length}`;
+      fill.style.height = `${Math.max(4, Math.round(((Number(group.count) || 0) / max) * 100))}%`;
+      lane.append(fill);
+
+      const key = document.createElement('span');
+      key.className = 'col-key';
+      key.textContent = displayGroupKey(group.key);
+      key.title = displayGroupKey(group.key);
+
+      column.append(value, lane, key);
+      chart.append(column);
+    });
+    return chart;
+  }
+
   function renderBreakdownCard(breakdown) {
     const card = document.createElement('article');
     card.className = 'analysis-card';
@@ -975,10 +1137,16 @@
     head.className = 'analysis-head';
     const title = document.createElement('h3');
     title.textContent = localizedText(breakdown.title);
+    const tags = document.createElement('span');
+    tags.className = 'analysis-tags';
+    const chartTag = document.createElement('span');
+    chartTag.className = 'chart-tag';
+    chartTag.textContent = t(`chart_${breakdown.chart || 'bar'}`);
     const entity = document.createElement('span');
     entity.className = 'entity-tag';
     entity.textContent = breakdown.entitySet;
-    head.append(title, entity);
+    tags.append(chartTag, entity);
+    head.append(title, tags);
     card.append(head);
 
     if (breakdown.status !== 'ok') {
@@ -989,38 +1157,25 @@
     const groups = Array.isArray(breakdown.groups) ? breakdown.groups : [];
     if (groups.length === 0) {
       card.append(dashboardNote(t('module_no_records'), false));
+    } else if (breakdown.chart === 'donut') {
+      card.append(buildDonutChart(groups));
+    } else if (breakdown.chart === 'column') {
+      card.append(buildColumnChart(groups));
     } else {
-      const list = document.createElement('ul');
-      list.className = 'bar-list';
-      const max = Math.max(...groups.map((group) => Number(group.count) || 0), 1);
-      for (const group of groups) {
-        const item = document.createElement('li');
-        item.className = 'bar-row';
-
-        const label = document.createElement('span');
-        label.className = 'bar-label';
-        label.textContent = group.key || '—';
-        label.title = group.key || '';
-
-        const track = document.createElement('span');
-        track.className = 'bar-track';
-        const fill = document.createElement('span');
-        fill.className = 'bar-fill';
-        fill.style.width = `${Math.max(2, Math.round(((Number(group.count) || 0) / max) * 100))}%`;
-        track.append(fill);
-
-        const count = document.createElement('span');
-        count.className = 'bar-count';
-        count.textContent = formatCount(group.count);
-
-        item.append(label, track, count);
-        list.append(item);
-      }
-      card.append(list);
+      card.append(buildBarChart(groups));
     }
 
     const foot = document.createElement('footer');
     foot.className = 'analysis-foot';
+    if (groups.length > 0) {
+      const top = groups[0];
+      const topShare = document.createElement('span');
+      topShare.textContent = t('analysis_top_share', {
+        key: displayGroupKey(top.key),
+        pct: formatShare(groupShare(groups, top)).replace('%', ''),
+      });
+      foot.append(topShare);
+    }
     const groupCount = document.createElement('span');
     groupCount.textContent = t('analysis_groups', {
       n: formatCount(breakdown.groupCount ?? groups.length),

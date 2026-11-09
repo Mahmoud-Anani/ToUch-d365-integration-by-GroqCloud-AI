@@ -33,9 +33,13 @@ export interface DashboardOverview {
   totalModules: number;
 }
 
+export type AnalysisChartType = 'bar' | 'donut' | 'column';
+
 export interface AnalysisGroup {
   key: string;
   count: number;
+  /** Share of the breakdown total, 0–1. */
+  share: number;
   value?: number | string | null;
 }
 
@@ -44,6 +48,7 @@ export interface AnalysisBreakdown {
   title: LocalizedText;
   entitySet: string;
   groupByField: string;
+  chart: AnalysisChartType;
   status: 'ok' | 'unavailable';
   groups: AnalysisGroup[];
   groupCount: number;
@@ -80,32 +85,246 @@ interface BreakdownDefinition {
   title: LocalizedText;
   entityName: string;
   groupByField: string;
+  chart: AnalysisChartType;
 }
 
+/**
+ * D365 data-analysis breakdowns. Every entry is a live, deterministic
+ * groupBy count over a real integration-map entity; each card degrades
+ * independently when its entity is unavailable.
+ */
 const BREAKDOWNS: readonly BreakdownDefinition[] = [
+  // Product & Inventory Analytics
   {
     id: 'products-by-type',
     title: { en: 'Products by type', ar: 'المنتجات حسب النوع' },
     entityName: 'ReleasedProductsV2',
     groupByField: 'ProductType',
+    chart: 'bar',
   },
+  {
+    id: 'products-by-data-area',
+    title: { en: 'Products by company', ar: 'المنتجات حسب الشركة' },
+    entityName: 'ReleasedProductsV2',
+    groupByField: 'dataAreaId',
+    chart: 'column',
+  },
+
+  // Customer Analytics
   {
     id: 'customers-by-group',
     title: { en: 'Customers by group', ar: 'العملاء حسب المجموعة' },
     entityName: 'CustomersV3',
     groupByField: 'CustomerGroupId',
+    chart: 'bar',
   },
+  {
+    id: 'customers-by-currency',
+    title: { en: 'Customers by currency', ar: 'العملاء حسب عملة البيع' },
+    entityName: 'CustomersV3',
+    groupByField: 'SalesCurrencyCode',
+    chart: 'donut',
+  },
+  {
+    id: 'customers-on-hold',
+    title: { en: 'Customers on hold', ar: 'العملاء حسب حالة الإيقاف' },
+    entityName: 'CustomersV3',
+    groupByField: 'OnHoldStatus',
+    chart: 'donut',
+  },
+  {
+    id: 'customers-by-company',
+    title: { en: 'Customers by company', ar: 'العملاء حسب الشركة' },
+    entityName: 'CustomersV3',
+    groupByField: 'dataAreaId',
+    chart: 'column',
+  },
+
+  // Vendor Analytics
   {
     id: 'vendors-by-group',
     title: { en: 'Vendors by group', ar: 'الموردون حسب المجموعة' },
     entityName: 'VendorsV2',
     groupByField: 'VendorGroupId',
+    chart: 'bar',
   },
+  {
+    id: 'vendors-by-currency',
+    title: { en: 'Vendors by currency', ar: 'الموردون حسب العملة' },
+    entityName: 'VendorsV2',
+    groupByField: 'CurrencyCode',
+    chart: 'donut',
+  },
+  {
+    id: 'vendors-by-company',
+    title: { en: 'Vendors by company', ar: 'الموردون حسب الشركة' },
+    entityName: 'VendorsV2',
+    groupByField: 'dataAreaId',
+    chart: 'column',
+  },
+
+  // Financial Transaction Analytics
   {
     id: 'invoices-by-status',
     title: { en: 'Invoices by posting status', ar: 'الفواتير حسب حالة الترحيل' },
     entityName: 'FreeTextInvoiceHeaders',
     groupByField: 'IsPosted',
+    chart: 'bar',
+  },
+  {
+    id: 'invoices-by-customer',
+    title: { en: 'Top invoice customers', ar: 'أكثر العملاء فواتير' },
+    entityName: 'FreeTextInvoiceHeaders',
+    groupByField: 'CustomerAccount',
+    chart: 'bar',
+  },
+  {
+    id: 'ledger-by-posted',
+    title: { en: 'Ledger journals by posting status', ar: 'يوميات دفتر الأستاذ حسب الترحيل' },
+    entityName: 'LedgerJournalHeaders',
+    groupByField: 'IsPosted',
+    chart: 'bar',
+  },
+  {
+    id: 'ledger-by-name',
+    title: { en: 'Ledger journals by name', ar: 'يوميات دفتر الأستاذ حسب الاسم' },
+    entityName: 'LedgerJournalHeaders',
+    groupByField: 'JournalName',
+    chart: 'column',
+  },
+  {
+    id: 'ledger-by-currency',
+    title: { en: 'Ledger journals by currency', ar: 'يوميات دفتر الأستاذ حسب العملة' },
+    entityName: 'LedgerJournalHeaders',
+    groupByField: 'AccountingCurrency',
+    chart: 'donut',
+  },
+  {
+    id: 'customer-payments-by-status',
+    title: { en: 'Customer payments by posting status', ar: 'مدفوعات العملاء حسب الترحيل' },
+    entityName: 'CustomerPaymentJournalHeaders',
+    groupByField: 'IsPosted',
+    chart: 'bar',
+  },
+  {
+    id: 'customer-payments-by-name',
+    title: { en: 'Customer payments by journal name', ar: 'مدفوعات العملاء حسب اسم اليومية' },
+    entityName: 'CustomerPaymentJournalHeaders',
+    groupByField: 'JournalName',
+    chart: 'column',
+  },
+  {
+    id: 'expense-journals-by-status',
+    title: { en: 'Expense journals by posting status', ar: 'يوميات المصروفات حسب الترحيل' },
+    entityName: 'ExpenseJournalHeaders',
+    groupByField: 'IsPosted',
+    chart: 'bar',
+  },
+  {
+    id: 'expense-journals-by-approver',
+    title: { en: 'Expense journals by approver', ar: 'يوميات المصروفات حسب المعتمد' },
+    entityName: 'ExpenseJournalHeaders',
+    groupByField: 'ApprovedBy',
+    chart: 'column',
+  },
+
+  // Account & Dimension Analytics
+  {
+    id: 'accounts-by-type',
+    title: { en: 'Main accounts by type', ar: 'الحسابات الرئيسية حسب النوع' },
+    entityName: 'MainAccounts',
+    groupByField: 'MainAccountType',
+    chart: 'column',
+  },
+  {
+    id: 'accounts-by-currency',
+    title: { en: 'Main accounts by currency', ar: 'الحسابات الرئيسية حسب العملة' },
+    entityName: 'MainAccounts',
+    groupByField: 'DefaultCurrency',
+    chart: 'donut',
+  },
+  {
+    id: 'accounts-by-suspension',
+    title: { en: 'Main accounts suspension status', ar: 'حالة إيقاف الحسابات الرئيسية' },
+    entityName: 'MainAccounts',
+    groupByField: 'IsSuspended',
+    chart: 'donut',
+  },
+  {
+    id: 'dimensions-by-entity',
+    title: { en: 'Financial dimensions by entity', ar: 'الأبعاد المالية حسب الكيان' },
+    entityName: 'FinancialDimensionValues',
+    groupByField: 'LegalEntityId',
+    chart: 'bar',
+  },
+  {
+    id: 'dimensions-by-type',
+    title: { en: 'Financial dimensions by type', ar: 'الأبعاد المالية حسب النوع' },
+    entityName: 'FinancialDimensionValues',
+    groupByField: 'FinancialDimension',
+    chart: 'column',
+  },
+  {
+    id: 'dimensions-by-suspension',
+    title: { en: 'Financial dimensions suspension status', ar: 'حالة إيقاف الأبعاد المالية' },
+    entityName: 'FinancialDimensionValues',
+    groupByField: 'IsSuspended',
+    chart: 'donut',
+  },
+
+  // Exchange Rate & Currency Analytics
+  {
+    id: 'rates-by-type',
+    title: { en: 'Exchange rates by type', ar: 'أسعار الصرف حسب نوع السعر' },
+    entityName: 'ExchangeRates',
+    groupByField: 'RateTypeName',
+    chart: 'donut',
+  },
+  {
+    id: 'rates-from-currency',
+    title: { en: 'Exchange rates from currency', ar: 'أسعار الصرف من عملة' },
+    entityName: 'ExchangeRates',
+    groupByField: 'FromCurrency',
+    chart: 'bar',
+  },
+  {
+    id: 'rates-to-currency',
+    title: { en: 'Exchange rates to currency', ar: 'أسعار الصرف إلى عملة' },
+    entityName: 'ExchangeRates',
+    groupByField: 'ToCurrency',
+    chart: 'bar',
+  },
+
+  // System & User Analytics
+  {
+    id: 'users-by-language',
+    title: { en: 'System users by language', ar: 'مستخدمو النظام حسب اللغة' },
+    entityName: 'SystemUsers',
+    groupByField: 'Language',
+    chart: 'bar',
+  },
+  {
+    id: 'users-by-company',
+    title: { en: 'System users by company', ar: 'مستخدمو النظام حسب الشركة' },
+    entityName: 'SystemUsers',
+    groupByField: 'Company',
+    chart: 'column',
+  },
+
+  // Group Distribution Analytics
+  {
+    id: 'customer-groups-distribution',
+    title: { en: 'Customer groups by company', ar: 'مجموعات العملاء حسب الشركة' },
+    entityName: 'CustomerGroups',
+    groupByField: 'dataAreaId',
+    chart: 'column',
+  },
+  {
+    id: 'vendor-groups-distribution',
+    title: { en: 'Vendor groups by company', ar: 'مجموعات الموردين حسب الشركة' },
+    entityName: 'VendorGroups',
+    groupByField: 'dataAreaId',
+    chart: 'column',
   },
 ];
 
@@ -191,63 +410,78 @@ export class DashboardService {
   }
 
   async analysis(): Promise<DashboardAnalysis> {
-    const breakdowns = await Promise.all(
-      BREAKDOWNS.map(async (definition): Promise<AnalysisBreakdown> => {
-        const base = {
-          id: definition.id,
-          title: definition.title,
-          entitySet: definition.entityName,
-          groupByField: definition.groupByField,
-        };
-        try {
-          const result = await this.options.analytics.run({
-            operation: 'groupBy',
-            entityName: definition.entityName,
-            groupByField: definition.groupByField,
-            aggregateOperation: 'count',
-          });
-          const groups = (result.groups ?? [])
-            .slice()
-            .sort((left, right) => right.count - left.count)
-            .slice(0, MAX_GROUP_ROWS)
-            .map((group) => ({
-              key: group.key,
-              count: group.count,
-              ...(group.value !== undefined ? { value: group.value } : {}),
-            }));
-          return {
-            ...base,
-            status: 'ok',
-            groups,
-            groupCount: result.groupCount ?? result.groups?.length ?? groups.length,
-            complete: result.complete,
-            recordsScanned: result.recordsScanned,
-            ...(result.totalMatches !== undefined ? { totalMatches: result.totalMatches } : {}),
-          };
-        } catch (error) {
-          this.options.logger.warn('Dashboard analysis failed', {
-            breakdown: definition.id,
-            entitySet: definition.entityName,
-            code: toPublicError(error).body.error.code,
-          });
-          return {
-            ...base,
-            status: 'unavailable',
-            groups: [],
-            groupCount: 0,
-            complete: false,
-            recordsScanned: 0,
-            error: safeMessage(error),
-          };
-        }
-      }),
-    );
+    // Batch scans so 11 breakdowns never hit D365 all at once.
+    const concurrency = 5;
+    const breakdowns: AnalysisBreakdown[] = new Array(BREAKDOWNS.length);
+    let cursor = 0;
+    const workers = Array.from({ length: Math.min(concurrency, BREAKDOWNS.length) }, async () => {
+      while (cursor < BREAKDOWNS.length) {
+        const index = cursor++;
+        const definition = BREAKDOWNS[index] as BreakdownDefinition;
+        breakdowns[index] = await this.runBreakdown(definition);
+      }
+    });
+    await Promise.all(workers);
 
     return {
       generatedAt: new Date().toISOString(),
       readOnly: true,
       breakdowns,
     };
+  }
+
+  private async runBreakdown(definition: BreakdownDefinition): Promise<AnalysisBreakdown> {
+    const base = {
+      id: definition.id,
+      title: definition.title,
+      entitySet: definition.entityName,
+      groupByField: definition.groupByField,
+      chart: definition.chart,
+    };
+    try {
+      const result = await this.options.analytics.run({
+        operation: 'groupBy',
+        entityName: definition.entityName,
+        groupByField: definition.groupByField,
+        aggregateOperation: 'count',
+      });
+      const allGroups = result.groups ?? [];
+      const total = allGroups.reduce((sum, group) => sum + (Number(group.count) || 0), 0);
+      const groups = allGroups
+        .slice()
+        .sort((left, right) => right.count - left.count)
+        .slice(0, MAX_GROUP_ROWS)
+        .map((group) => ({
+          key: group.key,
+          count: group.count,
+          share: total > 0 ? Number((group.count / total).toFixed(4)) : 0,
+          ...(group.value !== undefined ? { value: group.value } : {}),
+        }));
+      return {
+        ...base,
+        status: 'ok',
+        groups,
+        groupCount: result.groupCount ?? result.groups?.length ?? groups.length,
+        complete: result.complete,
+        recordsScanned: result.recordsScanned,
+        ...(result.totalMatches !== undefined ? { totalMatches: result.totalMatches } : {}),
+      };
+    } catch (error) {
+      this.options.logger.warn('Dashboard analysis failed', {
+        breakdown: definition.id,
+        entitySet: definition.entityName,
+        code: toPublicError(error).body.error.code,
+      });
+      return {
+        ...base,
+        status: 'unavailable',
+        groups: [],
+        groupCount: 0,
+        complete: false,
+        recordsScanned: 0,
+        error: safeMessage(error),
+      };
+    }
   }
 
   async records(

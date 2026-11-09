@@ -141,74 +141,90 @@ export class TokenProvider implements TokenSource {
       scope: this.options.scope,
     });
 
-    let response: Response;
-    try {
-      response = await this.options.fetchImpl(this.options.tokenUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Accept: 'application/json',
-        },
-        body: body.toString(),
-        signal: AbortSignal.timeout(this.options.timeoutMs),
-      });
-    } catch (error) {
-      this.failureCount += 1;
-      this.options.logger?.warn('D365 token request failed (network)', {
-        error: (error as Error).name,
-      });
-      throw new D365Error({
-        code: 'D365_AUTH_ERROR',
-        publicMessage: 'Unable to reach Microsoft Entra ID for D365 authentication.',
-        message: 'D365 token endpoint network error',
-        cause: error,
-      });
-    }
+    // One transient token-request blip must not fail every concurrent
+    // caller sharing this inflight request. Retry network-level failures
+    // (connection resets, DNS, timeouts) with a short backoff; OAuth
+    // rejections (e.g. bad credentials) are not retried.
+    const maxAttempts = 3;
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      let response: Response;
+      try {
+        response = await this.options.fetchImpl(this.options.tokenUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Accept: 'application/json',
+          },
+          body: body.toString(),
+          signal: AbortSignal.timeout(this.options.timeoutMs),
+        });
+      } catch (error) {
+        if (attempt < maxAttempts) {
+          await new Promise((resolve) => setTimeout(resolve, 250 * 2 ** (attempt - 1)));
+          continue;
+        }
+        this.failureCount += 1;
+        this.options.logger?.warn('D365 token request failed (network)', {
+          error: (error as Error).name,
+        });
+        throw new D365Error({
+          code: 'D365_AUTH_ERROR',
+          publicMessage: 'Unable to reach Microsoft Entra ID for D365 authentication.',
+          message: 'D365 token endpoint network error',
+          cause: error,
+        });
+      }
 
-    let payload: Record<string, unknown> = {};
-    try {
-      payload = (await response.json()) as Record<string, unknown>;
-    } catch {
-      // Leave payload empty; handled below.
-    }
+      let payload: Record<string, unknown> = {};
+      try {
+        payload = (await response.json()) as Record<string, unknown>;
+      } catch {
+        // Leave payload empty; handled below.
+      }
 
-    if (!response.ok) {
-      this.failureCount += 1;
-      const errorCode = typeof payload.error === 'string' ? payload.error : `http_${response.status}`;
-      this.options.logger?.warn('D365 token request rejected', {
-        status: response.status,
-        errorCode,
-      });
-      throw new D365Error({
-        code: 'D365_AUTH_ERROR',
-        publicMessage: 'D365 authentication failed. Verify the integration application credentials.',
-        message: `D365 token endpoint returned ${response.status}`,
-        details: { upstreamStatus: response.status, errorCode },
-      });
-    }
+      if (!response.ok) {
+        this.failureCount += 1;
+        const errorCode = typeof payload.error === 'string' ? payload.error : `http_${response.status}`;
+        this.options.logger?.warn('D365 token request rejected', {
+          status: response.status,
+          errorCode,
+        });
+        throw new D365Error({
+          code: 'D365_AUTH_ERROR',
+          publicMessage: 'D365 authentication failed. Verify the integration application credentials.',
+          message: `D365 token endpoint returned ${response.status}`,
+          details: { upstreamStatus: response.status, errorCode },
+        });
+      }
 
-    const accessToken = typeof payload.access_token === 'string' ? payload.access_token : '';
-    if (!accessToken) {
-      this.failureCount += 1;
-      throw new D365Error({
-        code: 'D365_AUTH_ERROR',
-        publicMessage: 'D365 authentication returned an invalid response.',
-        message: 'Token response did not contain access_token',
-      });
-    }
+      const accessToken = typeof payload.access_token === 'string' ? payload.access_token : '';
+      if (!accessToken) {
+        this.failureCount += 1;
+        throw new D365Error({
+          code: 'D365_AUTH_ERROR',
+          publicMessage: 'D365 authentication returned an invalid response.',
+          message: 'Token response did not contain access_token',
+        });
+      }
 
-    const expiresInRaw = Number(payload.expires_in);
-    const expiresIn = Number.isFinite(expiresInRaw) && expiresInRaw > 0 ? expiresInRaw : 3_600;
-    const token: CachedToken = {
-      value: accessToken,
-      expiresAt: this.options.clock() + expiresIn * 1_000,
-      mode: 'clientCredentials',
-    };
-    this.cached = token;
-    this.refreshCount += 1;
-    this.options.logger?.debug('D365 access token acquired', {
-      expiresInSeconds: expiresIn,
+      const expiresInRaw = Number(payload.expires_in);
+      const expiresIn = Number.isFinite(expiresInRaw) && expiresInRaw > 0 ? expiresInRaw : 3_600;
+      const token: CachedToken = {
+        value: accessToken,
+        expiresAt: this.options.clock() + expiresIn * 1_000,
+        mode: 'clientCredentials',
+      };
+      this.cached = token;
+      this.refreshCount += 1;
+      this.options.logger?.debug('D365 access token acquired', {
+        expiresInSeconds: expiresIn,
+      });
+      return token;
+    }
+    throw new D365Error({
+      code: 'D365_AUTH_ERROR',
+      publicMessage: 'Unable to reach Microsoft Entra ID for D365 authentication.',
+      message: 'D365 token endpoint network error',
     });
-    return token;
   }
 }
