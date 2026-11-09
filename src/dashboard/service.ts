@@ -126,6 +126,10 @@ export interface DashboardServiceOptions {
   client: D365Client;
   metadata: MetadataService;
   logger: Logger;
+  /** Maximum rows scanned per searched record query (safety bound, like analytics). */
+  searchMaxRows: number;
+  /** OData page size used to scan rows for searched record queries. */
+  searchPageSize: number;
 }
 
 export class DashboardService {
@@ -270,28 +274,81 @@ export class DashboardService {
       Math.max(0, Number.isFinite(options.skip) ? Math.trunc(options.skip as number) : 0),
     );
 
-    const filter = search
-      ? `contains(${module.searchField},'${search.replace(/'/g, "''")}')`
-      : undefined;
-
     // Tolerate metadata drift: only request fields that the live catalog
     // advertises. Keys are added automatically by the query builder.
     const entity = await this.options.metadata.getEntity(module.entitySet);
-    const select = entity
+    let select = entity
       ? module.fields.filter((field) =>
           entity.properties.some((property) => property.name.toLowerCase() === field.toLowerCase()),
         )
       : module.fields;
 
+    // Live D365 rejects contains()/startswith() with a 400 on these
+    // integration-map entities, so searched queries scan a bounded,
+    // server-ordered page set and filter in memory. The search field must
+    // therefore always be part of the selection.
+    if (search && entity && module.searchField) {
+      const searchProperty = entity.properties.find(
+        (property) => property.name.toLowerCase() === (module.searchField as string).toLowerCase(),
+      );
+      if (!searchProperty) {
+        throw new ValidationError('This module does not support text search.');
+      }
+      const alreadySelected = select.some(
+        (field) => field.toLowerCase() === searchProperty.name.toLowerCase(),
+      );
+      if (!alreadySelected) select = [...select, searchProperty.name];
+    }
+
     const query = await this.options.queryBuilder.validate({
       entityName: module.entitySet,
       ...(select.length > 0 ? { select } : {}),
-      ...(filter ? { filter } : {}),
       ...(module.orderBy ? { orderBy: module.orderBy } : {}),
       top,
       skip,
       includeCount: true,
     });
+
+    const columns = query.select.map((name) => {
+      const property = query.entity.properties.find(
+        (item) => item.name.toLowerCase() === name.toLowerCase(),
+      );
+      return { name, kind: property ? propertyKind(property.type) : 'unknown' };
+    });
+
+    if (search && module.searchField) {
+      const searchField = module.searchField;
+      const scan = await this.options.client.fetchAllPages(
+        query.entity.entitySet,
+        this.options.queryBuilder.toScanParams(query),
+        {
+          maxRows: Math.max(1, this.options.searchMaxRows),
+          pageSize: Math.max(1, this.options.searchPageSize),
+        },
+      );
+      const needle = search.toLowerCase();
+      const filtered = scan.rows.filter((row) =>
+        String(row?.[searchField] ?? '')
+          .toLowerCase()
+          .includes(needle),
+      );
+      const page = filtered.slice(skip, skip + top);
+      return {
+        module: {
+          id: module.id,
+          entitySet: module.entitySet,
+          title: module.title,
+          description: module.description,
+        },
+        columns,
+        records: page,
+        total: filtered.length,
+        top,
+        skip,
+        hasMore: skip + page.length < filtered.length,
+        generatedAt: new Date().toISOString(),
+      };
+    }
 
     const response = await this.options.client.getEntity<{ value?: unknown }>(
       query.entity.entitySet,
@@ -300,13 +357,6 @@ export class DashboardService {
     const rows = Array.isArray(response.data?.value)
       ? (response.data.value as Record<string, unknown>[])
       : [];
-
-    const columns = query.select.map((name) => {
-      const property = query.entity.properties.find(
-        (item) => item.name.toLowerCase() === name.toLowerCase(),
-      );
-      return { name, kind: property ? propertyKind(property.type) : 'unknown' };
-    });
 
     const total = typeof response.count === 'number' ? response.count : null;
     return {

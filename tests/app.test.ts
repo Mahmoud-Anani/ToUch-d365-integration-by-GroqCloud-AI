@@ -150,25 +150,50 @@ describe('HTTP API with mandatory login', () => {
     expect(modules.body.modules.length).toBeGreaterThanOrEqual(10);
     expect(modules.body.modules.map((module: { id: string }) => module.id)).toContain('customers');
 
-    const getEntity = vi.spyOn(services.client, 'getEntity').mockResolvedValue({
-      data: { value: [{ CustomerAccount: 'C-0001', OrganizationName: 'Contoso' }] },
-      status: 200,
-      url: 'https://test.operations.dynamics.com/data/CustomersV3',
-      count: 1,
+    // Live D365 rejects contains()/startswith(), so searched record queries
+    // scan server-ordered rows and filter in memory (case-insensitive).
+    const fetchAllPages = vi.spyOn(services.client, 'fetchAllPages').mockResolvedValue({
+      rows: [
+        { CustomerAccount: 'C-0001', OrganizationName: 'Contoso' },
+        { CustomerAccount: 'C-0002', OrganizationName: 'Fabrikam' },
+        { CustomerAccount: 'C-0003', OrganizationName: 'contoso retail' },
+      ],
+      complete: true,
+      pages: 1,
+      scanned: 3,
     });
 
+    // Apostrophes survive end-to-end: no OData string is built from search
+    // text, so nothing needs escaping and no injection is possible.
     const records = await agent
       .get('/api/dashboard/modules/customers/records')
       .query({ search: "O'Brien", top: 10 })
       .expect(200);
 
-    expect(getEntity).toHaveBeenCalledTimes(1);
-    const [entitySet, params] = getEntity.mock.calls[0] as [string, Record<string, string>];
-    expect(entitySet).toBe('CustomersV3');
-    expect(params.$filter).toBe("contains(OrganizationName,'O''Brien')");
-    expect(records.body.records).toEqual([{ CustomerAccount: 'C-0001', OrganizationName: 'Contoso' }]);
-    expect(records.body.total).toBe(1);
-    expect(records.body.columns.map((column: { name: string }) => column.name)).toContain('CustomerAccount');
+    expect(fetchAllPages).toHaveBeenCalledTimes(1);
+    expect(records.body.records).toEqual([]);
+    expect(records.body.total).toBe(0);
+
+    const found = await agent
+      .get('/api/dashboard/modules/customers/records')
+      .query({ search: 'CONTOSO', top: 10 })
+      .expect(200);
+    expect(found.body.records).toEqual([
+      { CustomerAccount: 'C-0001', OrganizationName: 'Contoso' },
+      { CustomerAccount: 'C-0003', OrganizationName: 'contoso retail' },
+    ]);
+    expect(found.body.total).toBe(2);
+    expect(found.body.columns.map((column: { name: string }) => column.name)).toContain('CustomerAccount');
+
+    const paged = await agent
+      .get('/api/dashboard/modules/customers/records')
+      .query({ search: 'contoso', top: 1, skip: 1 })
+      .expect(200);
+    expect(paged.body.records).toEqual([
+      { CustomerAccount: 'C-0003', OrganizationName: 'contoso retail' },
+    ]);
+    expect(paged.body.total).toBe(2);
+    expect(paged.body.hasMore).toBe(false);
   });
 
   it('returns 404 for an unknown dashboard module', async () => {

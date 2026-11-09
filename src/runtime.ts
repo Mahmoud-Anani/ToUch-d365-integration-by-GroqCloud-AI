@@ -138,7 +138,15 @@ export function createRuntime(config: AppConfig, options: RuntimeOptions = {}): 
   const queryBuilder = new QueryBuilder(metadata, config);
   const analytics = new AnalyticsEngine(client, metadata, queryBuilder, config);
   const tools = new ToolRegistry(metadata, queryBuilder, client, analytics, config, logger);
-  const dashboard = new DashboardService({ analytics, queryBuilder, client, metadata, logger });
+  const dashboard = new DashboardService({
+    analytics,
+    queryBuilder,
+    client,
+    metadata,
+    logger,
+    searchMaxRows: config.d365.analyticsMaxRows,
+    searchPageSize: config.d365.pageSize,
+  });
 
   const configuredProviders = config.ai.providers.map(
     (provider) =>

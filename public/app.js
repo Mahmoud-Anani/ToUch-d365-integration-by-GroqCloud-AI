@@ -1534,6 +1534,7 @@
 
   function updateDashboardStatus() {
     const setStatus = (label, dot, message, level) => {
+      if (!label || !dot) return;
       label.textContent = message;
       dot.classList.remove('ok', 'warn', 'error');
       if (level) dot.classList.add(level);
