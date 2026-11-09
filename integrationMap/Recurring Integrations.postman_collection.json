@@ -1,0 +1,396 @@
+{
+  "info": {
+    "_postman_id": "116604c0-bb2c-43bb-aa59-3318f7a379cb",
+    "name": "Recurring Integrations",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "23028124",
+    "_collection_link": "https://go.postman.co/collection/22139284-116604c0-bb2c-43bb-aa59-3318f7a379cb?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "General Journal",
+      "item": [
+        {
+          "name": "Enqueue",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = JSON.parse(responseBody);\r",
+                  "\r",
+                  "tests[\"Get Message ID\"] = !json.error && responseBody !=='' && responseBody !== '{}' && json.access_token !=='';\r",
+                  "\r",
+                  "postman.setEnvironmentVariable(\"generaljournal_message_id\", responseBody);"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "file",
+              "file": {}
+            },
+            "url": {
+              "raw": "{{resource}}api/connector/enqueue/{{generaljournal_activity_id}}?entity=General journal",
+              "host": [
+                "{{resource}}api"
+              ],
+              "path": [
+                "connector",
+                "enqueue",
+                "{{generaljournal_activity_id}}"
+              ],
+              "query": [
+                {
+                  "key": "entity",
+                  "value": "General journal"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Message Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"messageId\":{{generaljournal_message_id}}\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{resource}}data/DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.GetMessageStatus",
+              "host": [
+                "{{resource}}data"
+              ],
+              "path": [
+                "DataManagementDefinitionGroups",
+                "Microsoft.Dynamics.DataEntities.GetMessageStatus"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Execution Id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = JSON.parse(responseBody);\r",
+                  "\r",
+                  "tests[\"Get Execution ID\"] = !json.error && responseBody !=='' && responseBody !== '{}' && json.access_token !=='';\r",
+                  "\r",
+                  "postman.setEnvironmentVariable(\"generaljournal_execution_id\", json.value);"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"_messageId\":{{generaljournal_message_id}}\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{resource}}data/DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.GetExecutionIdByMessageId",
+              "host": [
+                "{{resource}}data"
+              ],
+              "path": [
+                "DataManagementDefinitionGroups",
+                "Microsoft.Dynamics.DataEntities.GetExecutionIdByMessageId"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Execution Errors",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"executionId\":\"{{generaljournal_execution_id}}\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{resource}}data/DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.GetExecutionErrors",
+              "host": [
+                "{{resource}}data"
+              ],
+              "path": [
+                "DataManagementDefinitionGroups",
+                "Microsoft.Dynamics.DataEntities.GetExecutionErrors"
+              ]
+            },
+            "description": "# Get Execution Errors\n\nThis API endpoint is used to retrieve execution errors for a specific data management definition group in Microsoft Dynamics.\n\n## Request\n\n- Method: POST\n    \n- Endpoint: `{{resource}}data/DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.GetExecutionErrors`\n    \n- Headers:\n    \n    - Content-Type: application/json\n        \n    - Authorization: Bearer\n        \n\n### Request Body\n\n- Type: Raw (application/json)\n    \n\n| Key | Type | Description |\n| --- | --- | --- |\n| executionId | string | The ID of the execution to retrieve errors for |\n\nExample:\n\n``` json\n{\n  \"executionId\": \"{{generaljournal_execution_id}}\"\n}\n## Response\nThe response for this request will be a JSON object containing the execution errors. Below is the JSON schema for the response:\n```json\n{\n  \"type\": \"object\",\n  \"properties\": {\n    \"errorId\": {\n      \"type\": \"string\"\n    },\n    \"errorCode\": {\n      \"type\": \"string\"\n    },\n    \"errorMessage\": {\n      \"type\": \"string\"\n    }\n    // Add more properties as per the actual response\n  }\n}\n\n ```"
+          },
+          "response": []
+        }
+      ],
+      "description": "## General Journal Recurring Import\n\nIf using the example file, follow the steps below:\n\n- Using Contoso setup a recurring import project\n- Set the GenJrn to allocate voucher at posting\n- Set based processing will need to be switch on (default) for the entity General Journal"
+    },
+    {
+      "name": "Customers",
+      "item": [
+        {
+          "name": "Enqueue",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = JSON.parse(responseBody);\r",
+                  "\r",
+                  "tests[\"Get Message ID\"] = !json.error && responseBody !=='' && responseBody !== '{}' && json.access_token !=='';\r",
+                  "\r",
+                  "postman.setEnvironmentVariable(\"customersv3_message_id\", responseBody);"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "file",
+              "file": {
+                "src": "postman-cloud:///1ef2f02f-edd2-42c0-a353-e2e8015bd082"
+              }
+            },
+            "url": {
+              "raw": "{{resource}}api/connector/enqueue/{{customersv3_activity_id}}?entity=Customers V3&company=USMF",
+              "host": [
+                "{{resource}}api"
+              ],
+              "path": [
+                "connector",
+                "enqueue",
+                "{{customersv3_activity_id}}"
+              ],
+              "query": [
+                {
+                  "key": "entity",
+                  "value": "Customers V3"
+                },
+                {
+                  "key": "company",
+                  "value": "USMF"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Message Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"messageId\":{{customersv3_message_id}}\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{resource}}data/DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.GetMessageStatus",
+              "host": [
+                "{{resource}}data"
+              ],
+              "path": [
+                "DataManagementDefinitionGroups",
+                "Microsoft.Dynamics.DataEntities.GetMessageStatus"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Execution Id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = JSON.parse(responseBody);\r",
+                  "\r",
+                  "tests[\"Get Execution ID\"] = !json.error && responseBody !=='' && responseBody !== '{}' && json.access_token !=='';\r",
+                  "\r",
+                  "postman.setEnvironmentVariable(\"customersv3_execution_id\", json.value);"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"_messageId\":{{customersv3_message_id}}\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{resource}}data/DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.GetExecutionIdByMessageId",
+              "host": [
+                "{{resource}}data"
+              ],
+              "path": [
+                "DataManagementDefinitionGroups",
+                "Microsoft.Dynamics.DataEntities.GetExecutionIdByMessageId"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Execution Errors",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"executionId\":\"{{customersv3_execution_id}}\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{resource}}data/DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.GetExecutionErrors",
+              "host": [
+                "{{resource}}data"
+              ],
+              "path": [
+                "DataManagementDefinitionGroups",
+                "Microsoft.Dynamics.DataEntities.GetExecutionErrors"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "## Customers Recurring Import\n\nIf using the example file, which is in the Enqueue step body, follow the steps below:\n\n- Using Contoso setup a recurring import project\n    \n- Update the variable customersv3_activity_id in the Recurring Integrations collection\n    \n- Set the customer account number sequence up to allow manual"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "generaljournal_activity_id",
+      "value": ""
+    },
+    {
+      "key": "customersv3_activity_id",
+      "value": ""
+    }
+  ]
+}

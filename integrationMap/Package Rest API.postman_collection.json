@@ -1,0 +1,495 @@
+{
+  "info": {
+    "_postman_id": "f1c3c0e2-0828-42d2-b26d-0ad5e3c88d88",
+    "name": "Package Rest API",
+    "description": "The examples here are grouped by Entity, but they all use the same API endpoints.\n\nThe Import is defined by the contents of the Manifest.xml in the zip package.\n\nThe export is defined by the DMF Export project specified in the definitionGroupId field in the call body.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "23028124",
+    "_collection_link": "https://go.postman.co/collection/22139284-f1c3c0e2-0828-42d2-b26d-0ad5e3c88d88?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Vendor Groups",
+      "item": [
+        {
+          "name": "Import",
+          "item": [
+            {
+              "name": "GetWriteableURL",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "\r",
+                      "let responseData = JSON.parse(pm.response.text());\r",
+                      "let valueData = JSON.parse(responseData.value);\r",
+                      "let blobUrl = valueData.BlobUrl;\r",
+                      "pm.environment.set(\"getwriteableurl\", blobUrl);\r",
+                      ""
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{bearerToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"uniqueFileName\": \"vendorGroupTestFile\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{resource}}data/DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.GetAzureWriteUrl",
+                  "host": [
+                    "{{resource}}data"
+                  ],
+                  "path": [
+                    "DataManagementDefinitionGroups",
+                    "Microsoft.Dynamics.DataEntities.GetAzureWriteUrl"
+                  ],
+                  "query": [
+                    {
+                      "key": "",
+                      "value": "",
+                      "disabled": true
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "UploadBlob",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "x-ms-blob-type",
+                    "value": "BlockBlob"
+                  }
+                ],
+                "body": {
+                  "mode": "file",
+                  "file": {
+                    "src": "e_6NwLaiP/{73C9F86A-A313-4EB8-8201-9765DABBA998}.zip"
+                  }
+                },
+                "url": {
+                  "raw": "{{getwriteableurl}}",
+                  "host": [
+                    "{{getwriteableurl}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "ImportFromPackage",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "let responseData = JSON.parse(pm.response.text());\r",
+                      "let executionID = responseData.value;\r",
+                      "pm.environment.set(\"executionid\", executionID);\r",
+                      ""
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{bearerToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"packageUrl\": \"{{getwriteableurl}}\",\r\n    \"definitionGroupId\": \"VendorGroupsFileImport\",\r\n    \"executionId\": \"\",\r\n    \"execute\": true,\r\n    \"overwrite\": true,\r\n    \"legalEntityId\": \"USMF\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{resource}}data/DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.ImportFromPackage",
+                  "host": [
+                    "{{resource}}data"
+                  ],
+                  "path": [
+                    "DataManagementDefinitionGroups",
+                    "Microsoft.Dynamics.DataEntities.ImportFromPackage"
+                  ],
+                  "query": [
+                    {
+                      "key": "",
+                      "value": "",
+                      "disabled": true
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "GetExecutionStatus",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{bearerToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"executionId\": \"{{executionid}}\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{resource}}data/DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.GetExecutionSummaryStatus",
+                  "host": [
+                    "{{resource}}data"
+                  ],
+                  "path": [
+                    "DataManagementDefinitionGroups",
+                    "Microsoft.Dynamics.DataEntities.GetExecutionSummaryStatus"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Export",
+          "item": [
+            {
+              "name": "ExportToPackage",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "let responseData = JSON.parse(pm.response.text());\r",
+                      "let executionID = responseData.value;\r",
+                      "pm.environment.set(\"executionid\", executionID);"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{bearerToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"definitionGroupId\": \"VendorGroupsFileExport\",\r\n    \"packageName\": \"VendorGroupsFileExport.csv\",\r\n    \"executionId\": \"\",\r\n    \"reExecute\": true,\r\n    \"legalEntityId\": \"usmf\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{resource}}data/DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.ExportToPackage",
+                  "host": [
+                    "{{resource}}data"
+                  ],
+                  "path": [
+                    "DataManagementDefinitionGroups",
+                    "Microsoft.Dynamics.DataEntities.ExportToPackage"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "GetExecutionStatus",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{bearerToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"executionId\": \"{{executionid}}\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{resource}}data/DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.GetExecutionSummaryStatus",
+                  "host": [
+                    "{{resource}}data"
+                  ],
+                  "path": [
+                    "DataManagementDefinitionGroups",
+                    "Microsoft.Dynamics.DataEntities.GetExecutionSummaryStatus"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "GetExportedPackageURL",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "let responseData = JSON.parse(pm.response.text());\r",
+                      "let exportedurl = responseData.value;\r",
+                      "pm.environment.set(\"exportedurl\", exportedurl);"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{bearerToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"executionId\": \"{{executionid}}\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{resource}}data/DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.GetExportedPackageUrl",
+                  "host": [
+                    "{{resource}}data"
+                  ],
+                  "path": [
+                    "DataManagementDefinitionGroups",
+                    "Microsoft.Dynamics.DataEntities.GetExportedPackageUrl"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "GetBlob",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{bearerToken}}",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{exportedurl}}",
+                  "host": [
+                    "{{exportedurl}}"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ],
+      "description": "Managing the import and export of Vendor Groups using the Vendor Groups entity and the Package API."
+    },
+    {
+      "name": "Vendors",
+      "item": [
+        {
+          "name": "Export",
+          "item": [
+            {
+              "name": "ExportToPackage",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "let responseData = JSON.parse(pm.response.text());\r",
+                      "let executionID = responseData.value;\r",
+                      "pm.environment.set(\"executionid\", executionID);"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{bearerToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"definitionGroupId\": \"Vendors Export\",\r\n    \"packageName\": \"Vendors.zip\",\r\n    \"executionId\": \"\",\r\n    \"reExecute\": true,\r\n    \"legalEntityId\": \"BTA1\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{resource}}data/DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.ExportToPackage",
+                  "host": [
+                    "{{resource}}data"
+                  ],
+                  "path": [
+                    "DataManagementDefinitionGroups",
+                    "Microsoft.Dynamics.DataEntities.ExportToPackage"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "GetExecutionStatus",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{bearerToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"executionId\": \"{{executionid}}\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{resource}}data/DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.GetExecutionSummaryStatus",
+                  "host": [
+                    "{{resource}}data"
+                  ],
+                  "path": [
+                    "DataManagementDefinitionGroups",
+                    "Microsoft.Dynamics.DataEntities.GetExecutionSummaryStatus"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "GetExportedPackageURL",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "let responseData = JSON.parse(pm.response.text());\r",
+                      "let exportedurl = responseData.value;\r",
+                      "pm.environment.set(\"exportedurl\", exportedurl);"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{bearerToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"executionId\": \"{{executionid}}\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{resource}}data/DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.GetExportedPackageUrl",
+                  "host": [
+                    "{{resource}}data"
+                  ],
+                  "path": [
+                    "DataManagementDefinitionGroups",
+                    "Microsoft.Dynamics.DataEntities.GetExportedPackageUrl"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "GetBlob",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{bearerToken}}",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{exportedurl}}",
+                  "host": [
+                    "{{exportedurl}}"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": "Example export of a Vendors package, the calls are identical to all package API exports, the Project specified in the ExportToPackage body, which must exist in D365, defines the content."
+        }
+      ],
+      "description": "Managing the import and export of Vendors using the Vendors V2 entity and the Package API."
+    }
+  ]
+}
