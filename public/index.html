@@ -8,20 +8,23 @@
     />
     <meta
       name="description"
-      content="Touch El-Zanouki Business Intelligence: a read-only assistant for Touch home-appliance business data."
+      content="Touch El-Zanouki D365 Integration Dashboard: live Dynamics 365 data analysis and read-only system module records."
     />
     <meta name="theme-color" content="#f5f7f4" id="theme-color-meta" />
-    <title>Touch El-Zanouki | Business Intelligence</title>
+    <title>Touch El-Zanouki | D365 Integration Dashboard</title>
     <link rel="icon" type="image/png" href="./touch-logo.png" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <a class="skip-link" href="#message-input" data-i18n="skip"
-      >Skip to message input</a
-    >
+    <a class="skip-link" href="#main-content" data-i18n="skip">Skip to content</a>
 
     <div class="app-shell">
-      <aside class="sidebar" id="sidebar" aria-label="Conversation history">
+      <aside
+        class="sidebar"
+        id="sidebar"
+        aria-label="Workspace navigation"
+        data-i18n-aria="sidebar_label"
+      >
         <div class="brand">
           <span class="brand-mark">
             <img
@@ -58,21 +61,6 @@
           </button>
         </div>
 
-        <button class="new-chat" id="new-chat" type="button">
-          <svg
-            viewBox="0 0 24 24"
-            width="18"
-            height="18"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-          >
-            <path d="M12 5v14M5 12h14"></path>
-          </svg>
-          <span data-i18n="new_chat">New conversation</span>
-        </button>
-
         <nav
           class="workspace-nav"
           aria-label="Workspace"
@@ -80,8 +68,8 @@
         >
           <span class="section-label" data-i18n="workspace">Workspace</span>
           <button
-            class="workspace-link"
-            id="overview-nav"
+            class="workspace-link active"
+            id="dashboard-nav"
             type="button"
             aria-current="page"
           >
@@ -101,11 +89,44 @@
               <rect x="13" y="10" width="8" height="11" rx="2"></rect>
               <rect x="3" y="13" width="8" height="8" rx="2"></rect>
             </svg>
-            <span data-i18n="overview">Overview</span>
+            <span data-i18n="nav_dashboard">Dashboard</span>
+          </button>
+          <!-- Chat nav hidden: dashboard is the primary D365 integration view -->
+          <button class="workspace-link" id="chat-nav" type="button" hidden aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M21 12a8 8 0 0 1-8 8H7l-4 3V12a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8Z"></path>
+              <path d="M8 11h8M8 15h5"></path>
+            </svg>
+            <span data-i18n="nav_chat">Chat</span>
           </button>
         </nav>
 
-        <div class="sidebar-section">
+        <div class="sidebar-section chat-sidebar" id="conversation-section" hidden>
+          <button class="new-chat" id="new-chat" type="button">
+            <svg
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <path d="M12 5v14M5 12h14"></path>
+            </svg>
+            <span data-i18n="new_chat">New conversation</span>
+          </button>
+
           <div class="section-head">
             <span data-i18n="recent_conversations">Recent conversations</span>
             <button
@@ -134,6 +155,7 @@
             class="conversation-list"
             id="conversation-list"
             aria-label="Conversations"
+            data-i18n-aria="conversations"
           ></nav>
         </div>
 
@@ -168,6 +190,39 @@
               Refresh metadata
             </button>
           </div>
+
+          <div class="account-card" id="account-card" hidden>
+            <span class="account-avatar" id="account-avatar" aria-hidden="true"
+              >A</span
+            >
+            <span class="account-copy">
+              <strong id="account-name"></strong>
+              <small id="account-role"></small>
+            </span>
+            <button
+              class="icon-btn account-logout"
+              id="logout-btn"
+              type="button"
+              aria-label="Sign out"
+              data-i18n-aria="sign_out"
+              title="Sign out"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="17"
+                height="17"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"></path>
+                <path d="M10 17l5-5-5-5M15 12H3"></path>
+              </svg>
+            </button>
+          </div>
+
           <p class="sidebar-note">
             <svg
               viewBox="0 0 24 24"
@@ -184,7 +239,7 @@
               <path d="m9 12 2 2 4-4"></path>
             </svg>
             <span data-i18n="read_only_note">
-            Read-only access. No ERP records can be changed.
+              Read-only access. No ERP records can be changed.
             </span>
           </p>
         </div>
@@ -192,7 +247,7 @@
 
       <div class="backdrop" id="sidebar-backdrop" hidden></div>
 
-      <main class="main">
+      <main class="main" id="main-content" tabindex="-1">
         <header class="topbar">
           <button
             class="icon-btn menu-toggle"
@@ -214,12 +269,15 @@
             </svg>
           </button>
           <div class="title-block">
-            <h1 id="chat-title" data-i18n="new_chat">New conversation</h1>
-            <p id="chat-subtitle" data-i18n="subtitle_default">
-              Touch home-appliance business intelligence
+            <h1 id="view-title" data-i18n="view_dashboard_title">
+              D365 Integration Dashboard
+            </h1>
+            <p id="view-subtitle" data-i18n="view_dashboard_subtitle">
+              Live Dynamics 365 data · Analysis &amp; System Modules
             </p>
           </div>
           <div class="topbar-actions">
+            <span class="topbar-user" id="topbar-user" hidden></span>
             <button
               class="chip-btn"
               id="lang-toggle"
@@ -268,46 +326,72 @@
           </div>
         </header>
 
-        <section
-          class="messages"
-          id="messages"
-          role="log"
-          aria-live="polite"
-          aria-relevant="additions"
-        ></section>
-
-        <section class="empty-state" id="empty-state">
-          <div class="empty-inner">
-            <div class="dashboard-kicker">
-              <span class="dashboard-kicker-line" aria-hidden="true"></span>
-              <span data-i18n="dashboard_kicker">BUSINESS OVERVIEW</span>
-            </div>
-            <div class="dashboard-hero">
-              <div class="dashboard-copy">
-                <h2 data-i18n="empty_title">
-                  A clearer view of the Touch business
-                </h2>
-                <p data-i18n="empty_body">
-                  Ask about products, stock, sales, purchasing, and more. Touch
-                  Business Intelligence checks live ERP data and shows where every
-                  answer comes from—without changing records.
+        <div class="view dashboard-view" id="dashboard-view" role="region" aria-labelledby="view-title">
+          <div class="dashboard-scroll" id="dashboard-scroll">
+            <header class="dashboard-intro">
+              <div class="dashboard-intro-copy">
+                <div class="dashboard-kicker">
+                  <span class="dashboard-kicker-line" aria-hidden="true"></span>
+                  <span data-i18n="dashboard_kicker">D365 INTEGRATION</span>
+                </div>
+                <h2 data-i18n="dashboard_title">Live Dynamics 365 data, one clear view</h2>
+                <p data-i18n="dashboard_body">
+                  Live Dynamics 365 analysis and read-only records from the integration
+                  map, presented in one bilingual workspace.
                 </p>
-                <button class="dashboard-cta" id="dashboard-ask" type="button">
-                  <span data-i18n="dashboard_cta">Ask your first question</span>
-                  <svg
-                    viewBox="0 0 24 24"
-                    width="17"
-                    height="17"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M5 12h14M13 6l6 6-6 6"></path>
-                  </svg>
-                </button>
+                <div class="dashboard-meta">
+                  <span class="read-only-badge">
+                    <span aria-hidden="true"></span>
+                    <span data-i18n="read_only_badge">READ ONLY</span>
+                  </span>
+                  <span class="dashboard-updated" id="dashboard-updated"></span>
+                  <button class="chip-btn" id="refresh-dashboard" type="button">
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="15"
+                      height="15"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M20 12a8 8 0 1 1-2.34-5.66"></path>
+                      <path d="M20 4v5h-5"></path>
+                    </svg>
+                    <span data-i18n="refresh">Refresh</span>
+                  </button>
+                  <button class="chip-btn" id="dashboard-go-chat" type="button">
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="15"
+                      height="15"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M21 12a8 8 0 0 1-8 8H7l-4 3V12a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8Z"></path>
+                    </svg>
+                    <span data-i18n="open_chat">Ask a question</span>
+                  </button>
+                </div>
+                <div class="status-strip" aria-live="polite">
+                  <span class="status-chip">
+                    <span class="signal-dot" id="erp-status-dot" aria-hidden="true"></span>
+                    <span class="status-chip-label" data-i18n="erp_source">ERP source</span>
+                    <strong class="status-chip-value" id="erp-status" data-i18n="status_checking">Checking…</strong>
+                  </span>
+                  <!-- AI assistant chip hidden: D365-only integration -->
+                  <span class="status-chip">
+                    <span class="signal-dot" id="catalog-status-dot" aria-hidden="true"></span>
+                    <span class="status-chip-label" data-i18n="business_catalog">Business catalog</span>
+                    <strong class="status-chip-value" id="catalog-status" data-i18n="status_checking">Checking…</strong>
+                  </span>
+                </div>
               </div>
               <div class="dashboard-art" aria-hidden="true">
                 <div class="art-orbit orbit-one"></div>
@@ -318,142 +402,198 @@
                   <img src="./touch-logo.png" alt="" width="124" height="65" />
                 </div>
               </div>
-            </div>
-            <div class="dashboard-section-heading">
-              <div>
-                <h3 data-i18n="workspace_status">Workspace status</h3>
-                <p data-i18n="workspace_status_hint">
-                  A live view of the tools behind your answers
-                </p>
+            </header>
+
+            <section class="dashboard-section" aria-labelledby="analysis-title">
+              <div class="section-heading">
+                <div class="section-heading-copy">
+                  <span class="section-index" aria-hidden="true">01</span>
+                  <div>
+                    <h2 id="analysis-title" data-i18n="analysis_title">
+                      D365 data analysis
+                    </h2>
+                    <p data-i18n="analysis_hint">
+                      Live counts and breakdowns from the entities used by the assistant
+                    </p>
+                  </div>
+                </div>
+                <span class="section-note" id="analysis-status"></span>
               </div>
-              <span class="read-only-badge">
-                <span aria-hidden="true"></span>
-                <span data-i18n="read_only_badge">READ ONLY</span>
-              </span>
-            </div>
-            <div class="signal-grid" aria-live="polite">
-              <article class="signal-card">
-                <span class="signal-icon signal-erp" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M4 20V9l8-5 8 5v11"></path>
-                    <path d="M9 20v-6h6v6M8 10h.01M12 10h.01M16 10h.01"></path>
-                  </svg>
-                </span>
-                <span class="signal-copy">
-                  <span class="signal-label" data-i18n="erp_source">ERP source</span>
-                  <strong class="signal-value" id="erp-status" data-i18n="status_checking">Checking…</strong>
-                </span>
-                <span class="signal-dot" id="erp-status-dot" aria-hidden="true"></span>
-              </article>
-              <article class="signal-card">
-                <span class="signal-icon signal-ai" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 3v3m0 12v3M3 12h3m12 0h3"></path>
-                    <path d="m5.64 5.64 2.12 2.12m8.48 8.48 2.12 2.12m0-12.72-2.12 2.12m-8.48 8.48-2.12 2.12"></path>
-                    <circle cx="12" cy="12" r="4"></circle>
-                  </svg>
-                </span>
-                <span class="signal-copy">
-                  <span class="signal-label" data-i18n="ai_assistant">AI assistant</span>
-                  <strong class="signal-value" id="ai-status" data-i18n="status_checking">Checking…</strong>
-                </span>
-                <span class="signal-dot" id="ai-status-dot" aria-hidden="true"></span>
-              </article>
-              <article class="signal-card">
-                <span class="signal-icon signal-catalog" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 1 4 17.5z"></path>
-                    <path d="M4 17.5A2.5 2.5 0 0 1 6.5 15H20M8 7h8M8 10h5"></path>
-                  </svg>
-                </span>
-                <span class="signal-copy">
-                  <span class="signal-label" data-i18n="business_catalog">Business catalog</span>
-                  <strong class="signal-value" id="catalog-status" data-i18n="status_checking">Checking…</strong>
-                </span>
-                <span class="signal-dot" id="catalog-status-dot" aria-hidden="true"></span>
-              </article>
-            </div>
-            <div class="suggestion-heading">
-              <h3 data-i18n="start_with">Start with a question</h3>
-              <span data-i18n="suggestions_hint">Choose a topic to explore</span>
-            </div>
-            <div class="suggestions" id="suggestions"></div>
-          </div>
-        </section>
 
-        <section
-          class="status-panel"
-          id="status-panel"
-          hidden
-          aria-live="polite"
-        >
-          <div class="status-current">
-            <span class="spinner" aria-hidden="true"></span>
-            <span id="status-label" data-i18n="working">Working…</span>
-            <span class="status-detail" id="status-detail"></span>
-          </div>
-          <ol class="status-steps" id="status-steps"></ol>
-        </section>
+              <div class="kpi-grid" id="kpi-grid" aria-live="polite"></div>
+              <div class="analysis-grid" id="analysis-grid" aria-live="polite"></div>
+            </section>
 
-        <footer class="composer-wrap">
-          <form class="composer" id="composer" autocomplete="off">
-            <label class="sr-only" for="message-input" data-i18n="message_label"
-              >Message</label
-            >
-            <textarea
-              id="message-input"
-              name="message"
-              rows="1"
-              maxlength="4000"
-              placeholder="Ask about customers, inventory, purchase orders…"
-              data-i18n-placeholder="composer_placeholder"
-            ></textarea>
-            <div class="composer-bar">
-              <span class="composer-hint" data-i18n="composer_hint"
-                >Enter to send · Shift+Enter for a new line</span
-              >
-              <span
-                class="char-count"
-                id="char-count"
-                aria-live="polite"
-              ></span>
-              <button
-                class="stop-btn"
-                id="stop-btn"
-                type="button"
+            <section class="dashboard-section" aria-labelledby="modules-title">
+              <div class="section-heading">
+                <div class="section-heading-copy">
+                  <span class="section-index" aria-hidden="true">02</span>
+                  <div>
+                    <h2 id="modules-title" data-i18n="modules_title">
+                      System modules
+                    </h2>
+                    <p data-i18n="modules_hint">
+                      Browse read-only records from the integration map entities
+                    </p>
+                  </div>
+                </div>
+                <span class="section-note" id="modules-status"></span>
+              </div>
+
+              <div class="module-grid" id="module-grid" aria-live="polite"></div>
+
+              <section
+                class="module-browser"
+                id="module-browser"
                 hidden
-                data-i18n="stop"
+                aria-labelledby="module-browser-title"
               >
-                Stop
-              </button>
-              <button
-                class="send-btn"
-                id="send-btn"
-                type="submit"
-                aria-label="Send message"
-                data-i18n-aria="send"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  width="19"
-                  height="19"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.9"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="m4 12 16-7-7 16-2.5-7.5z"></path>
-                  <path d="M10.5 13.5 20 5"></path>
-                </svg>
-              </button>
+                <div class="module-browser-head">
+                  <button
+                    class="icon-btn"
+                    id="module-browser-close"
+                    type="button"
+                    aria-label="Close"
+                    data-i18n-aria="close"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="18"
+                      height="18"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                    >
+                      <path d="M6 6l12 12M18 6 6 18"></path>
+                    </svg>
+                  </button>
+                  <div class="module-browser-copy">
+                    <span class="module-category" id="module-browser-category"></span>
+                    <h3 id="module-browser-title"></h3>
+                    <p id="module-browser-description"></p>
+                  </div>
+                  <span class="module-browser-count" id="module-browser-count"></span>
+                </div>
+
+                <form class="module-search" id="module-search" autocomplete="off">
+                  <label class="sr-only" for="module-search-input" data-i18n="module_search_label"
+                    >Search records</label
+                  >
+                  <input
+                    id="module-search-input"
+                    type="search"
+                    maxlength="120"
+                    data-i18n-placeholder="module_search_placeholder"
+                    placeholder="Search records…"
+                  />
+                  <button class="secondary-btn" id="module-search-btn" type="submit" data-i18n="search">
+                    Search
+                  </button>
+                  <button class="text-btn" id="module-search-clear" type="button" data-i18n="clear">
+                    Clear
+                  </button>
+                </form>
+
+                <div class="module-table-wrap" id="module-table-wrap" aria-live="polite"></div>
+
+                <div class="module-pager">
+                  <button class="secondary-btn" id="module-prev" type="button" data-i18n="previous">
+                    Previous
+                  </button>
+                  <span class="module-page-info" id="module-page-info"></span>
+                  <button class="secondary-btn" id="module-next" type="button" data-i18n="next">
+                    Next
+                  </button>
+                </div>
+              </section>
+            </section>
+          </div>
+        </div>
+
+        <div class="view chat-view" id="chat-view" role="region" aria-labelledby="view-title" hidden>
+          <section
+            class="messages"
+            id="messages"
+            role="log"
+            aria-live="polite"
+            aria-relevant="additions"
+          ></section>
+
+          <section class="empty-state" id="empty-state">
+            <div class="empty-inner">
+              <div class="empty-mark">
+                <img src="./touch-logo.png" alt="" width="154" height="80" />
+              </div>
+              <h2 data-i18n="empty_title">Ask about the Touch business</h2>
+              <p data-i18n="empty_body">
+                Ask about products, stock, sales, purchasing, and more. Touch Business
+                Intelligence checks live ERP data and shows where every answer comes
+                from—without changing records.
+              </p>
+              <div class="suggestions" id="suggestions"></div>
             </div>
-          </form>
-          <p class="disclaimer" data-i18n="disclaimer">
-            Touch Business Intelligence · Read-only access. Verify important
-            business figures before acting on them.
-          </p>
-        </footer>
+          </section>
+
+          <section class="status-panel" id="status-panel" hidden aria-live="polite">
+            <div class="status-current">
+              <span class="spinner" aria-hidden="true"></span>
+              <span id="status-label" data-i18n="working">Working…</span>
+              <span class="status-detail" id="status-detail"></span>
+            </div>
+            <ol class="status-steps" id="status-steps"></ol>
+          </section>
+
+          <footer class="composer-wrap">
+            <form class="composer" id="composer" autocomplete="off">
+              <label class="sr-only" for="message-input" data-i18n="message_label"
+                >Message</label
+              >
+              <textarea
+                id="message-input"
+                name="message"
+                rows="1"
+                maxlength="4000"
+                placeholder="Ask about customers, inventory, purchase orders…"
+                data-i18n-placeholder="composer_placeholder"
+              ></textarea>
+              <div class="composer-bar">
+                <span class="composer-hint" data-i18n="composer_hint"
+                  >Enter to send · Shift+Enter for a new line</span
+                >
+                <span class="char-count" id="char-count" aria-live="polite"></span>
+                <button class="stop-btn" id="stop-btn" type="button" hidden data-i18n="stop">
+                  Stop
+                </button>
+                <button
+                  class="send-btn"
+                  id="send-btn"
+                  type="submit"
+                  aria-label="Send message"
+                  data-i18n-aria="send"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="19"
+                    height="19"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.9"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="m4 12 16-7-7 16-2.5-7.5z"></path>
+                    <path d="M10.5 13.5 20 5"></path>
+                  </svg>
+                </button>
+              </div>
+            </form>
+            <p class="disclaimer" data-i18n="disclaimer">
+              Touch Business Intelligence · Read-only access. Verify important business
+              figures before acting on them.
+            </p>
+          </footer>
+        </div>
       </main>
     </div>
 
@@ -473,20 +613,10 @@
           <p class="field-error" id="modal-error" hidden></p>
         </div>
         <div class="modal-actions">
-          <button
-            class="secondary-btn"
-            id="modal-cancel"
-            type="button"
-            data-i18n="cancel"
-          >
+          <button class="secondary-btn" id="modal-cancel" type="button" data-i18n="cancel">
             Cancel
           </button>
-          <button
-            class="primary-btn"
-            id="modal-confirm"
-            type="button"
-            data-i18n="confirm"
-          >
+          <button class="primary-btn" id="modal-confirm" type="button" data-i18n="confirm">
             Confirm
           </button>
         </div>

@@ -9,9 +9,10 @@ import express, {
 import { randomUUID } from 'node:crypto';
 import { toPublicError, isAbortError, ValidationError, NotFoundError } from './errors';
 import type { AppServices } from './runtime';
-import { authMiddleware } from './http/auth';
+import { authMiddleware, requireSession } from './http/auth';
+import { createAuthRouter } from './http/auth-routes';
 import { RateLimiter, chatRateLimitMiddleware, rateLimitMiddleware } from './http/rate-limit';
-import { requestIdMiddleware, securityHeaders } from './http/security';
+import { requestIdMiddleware, sameOriginGuard, securityHeaders } from './http/security';
 import type { AgentStatus } from './ai/status';
 import type { PublicConversation } from './chat/types';
 
@@ -138,7 +139,7 @@ export function createApp(services: AppServices): Express {
         ...metadata,
         ...(metadata.lastError ? { lastError: 'Last metadata refresh failed.' } : {}),
       },
-      authRequired: false,
+      authRequired: true,
       warnings: config.warnings,
     });
   });
@@ -152,8 +153,20 @@ export function createApp(services: AppServices): Express {
     max: config.rateLimit.chatMax,
   });
 
+  app.use(sameOriginGuard());
+  app.use(authMiddleware(services.sessions, services.users));
+  app.use(
+    '/api/auth',
+    createAuthRouter({
+      config,
+      users: services.users,
+      sessions: services.sessions,
+      logger,
+    }),
+  );
+
   app.use('/api', rateLimitMiddleware(globalLimiter));
-  app.use('/api', authMiddleware(config));
+  app.use('/api', requireSession);
 
   app.get(
     '/api/metadata/status',
@@ -394,6 +407,41 @@ export function createApp(services: AppServices): Express {
     }),
   );
 
+  app.get(
+    '/api/dashboard/overview',
+    asyncHandler(async (req, res) => {
+      const force = req.query.refresh === 'true' || req.query.refresh === '1';
+      res.json(await services.dashboard.overview({ force }));
+    }),
+  );
+
+  app.get(
+    '/api/dashboard/analysis',
+    asyncHandler(async (_req, res) => {
+      res.json(await services.dashboard.analysis());
+    }),
+  );
+
+  app.get('/api/dashboard/modules', (_req, res) => {
+    res.json({ modules: services.dashboard.listModules() });
+  });
+
+  app.get(
+    '/api/dashboard/modules/:id/records',
+    asyncHandler(async (req, res) => {
+      const search = typeof req.query.search === 'string' ? req.query.search : '';
+      const top = parsePositiveInt(req.query.top, 25, 100);
+      const skipRaw = typeof req.query.skip === 'string' ? Number(req.query.skip) : 0;
+      const skip = Number.isFinite(skipRaw) ? Math.max(0, Math.trunc(skipRaw)) : 0;
+      const result = await services.dashboard.records(pathParam(req, 'id'), {
+        search,
+        top,
+        skip,
+      });
+      res.json(result);
+    }),
+  );
+
   app.use('/api', (req, res) => {
     res.status(404).json({
       error: { code: 'NOT_FOUND', message: 'API route not found.' },
@@ -401,6 +449,39 @@ export function createApp(services: AppServices): Express {
   });
 
   const publicDir = path.join(__dirname, '..', 'public');
+  const loginPage = path.join(publicDir, 'login.html');
+  const publicStatic = new Set([
+    '/login',
+    '/login.html',
+    '/login.js',
+    '/login.css',
+    // Shared design tokens and base components used by the login page.
+    '/styles.css',
+    '/touch-logo.png',
+    '/favicon.ico',
+  ]);
+
+  app.get(['/login', '/login.html'], (req, res) => {
+    if (req.auth) {
+      res.redirect('/');
+      return;
+    }
+    res.sendFile(loginPage);
+  });
+
+  app.use((req, res, next) => {
+    if (publicStatic.has(req.path) || req.auth) {
+      next();
+      return;
+    }
+    if (req.method === 'GET' && req.accepts('html')) {
+      const nextUrl = req.originalUrl.startsWith('/') ? req.originalUrl : '/';
+      res.redirect(302, `/login?next=${encodeURIComponent(nextUrl)}`);
+      return;
+    }
+    res.status(401).type('text').send('Authentication required');
+  });
+
   app.use(
     express.static(publicDir, {
       index: 'index.html',

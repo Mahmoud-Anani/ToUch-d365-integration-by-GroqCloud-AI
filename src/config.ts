@@ -1,5 +1,6 @@
 import path from 'node:path';
 import dotenv from 'dotenv';
+import { generateSessionSecret } from './auth/session';
 
 dotenv.config();
 
@@ -76,6 +77,16 @@ export interface ConversationConfig {
   retentionDays: number;
 }
 
+export interface AuthConfig {
+  usersFile: string;
+  sessionSecret: string;
+  sessionTtlMs: number;
+  cookieName: string;
+  cookieSecure: boolean;
+  loginWindowMs: number;
+  loginMaxAttempts: number;
+}
+
 export interface AppConfig {
   env: string;
   port: number;
@@ -93,6 +104,7 @@ export interface AppConfig {
   d365: D365Config;
   ai: AIConfig;
   conversations: ConversationConfig;
+  auth: AuthConfig;
   metadata: {
     cacheTtlMs: number;
     cacheDir: string;
@@ -472,10 +484,28 @@ export function createConfig(env: EnvLike = process.env): AppConfig {
     warnings.push(`Unknown CONVERSATION_STORE "${conversationStore}"; falling back to "file".`);
   }
 
+  const nodeEnv = str(env, 'NODE_ENV', 'development');
+  let sessionSecret = str(env, 'SESSION_SECRET');
+  if (!sessionSecret) {
+    if (nodeEnv === 'production') {
+      throw new Error('SESSION_SECRET is required in production and must contain at least 32 characters.');
+    }
+    sessionSecret = generateSessionSecret();
+    warnings.push(
+      'SESSION_SECRET is not set; using an ephemeral development secret. Sessions will be invalidated when the server restarts.',
+    );
+  } else if (sessionSecret.length < 32) {
+    throw new Error('SESSION_SECRET must contain at least 32 characters.');
+  }
+
+  const cookieName = str(env, 'SESSION_COOKIE_NAME', 'tez_session');
+  if (!/^[A-Za-z0-9._-]{1,64}$/.test(cookieName)) {
+    throw new Error('SESSION_COOKIE_NAME must contain only letters, digits, dots, underscores, or hyphens.');
+  }
+
   const config: AppConfig = {
-    env: str(env, 'NODE_ENV', 'development'),
-    port: clamp(int(env, 'PORT', 3000), 1, 65535),
-    logLevel: (str(env, 'LOG_LEVEL', 'info') as LogLevel) ?? 'info',
+    env: nodeEnv,
+    port: clamp(int(env, 'PORT', 3000), 1, 65535),    logLevel: (str(env, 'LOG_LEVEL', 'info') as LogLevel) ?? 'info',
     requestBodyLimit: str(env, 'REQUEST_BODY_LIMIT', '128kb'),
     trustProxy: bool(env, 'TRUST_PROXY', false),
     app: {
@@ -540,6 +570,15 @@ export function createConfig(env: EnvLike = process.env): AppConfig {
       maxPerUser: clamp(int(env, 'CONVERSATION_MAX_PER_USER', 100), 1, 10_000),
       maxMessages: clamp(int(env, 'CONVERSATION_MAX_MESSAGES', 200), 2, 2_000),
       retentionDays: clamp(int(env, 'CONVERSATION_RETENTION_DAYS', 30), 1, 3_650),
+    },
+    auth: {
+      usersFile: path.resolve(str(env, 'USERS_FILE', 'config/users.json')),
+      sessionSecret,
+      sessionTtlMs: clamp(int(env, 'SESSION_TTL_MS', 8 * 60 * 60 * 1_000), 5 * 60 * 1_000, 30 * 24 * 60 * 60 * 1_000),
+      cookieName,
+      cookieSecure: bool(env, 'SESSION_COOKIE_SECURE', nodeEnv === 'production'),
+      loginWindowMs: clamp(int(env, 'LOGIN_RATE_LIMIT_WINDOW_MS', 15 * 60 * 1_000), 10_000, 24 * 60 * 60 * 1_000),
+      loginMaxAttempts: clamp(int(env, 'LOGIN_RATE_LIMIT_MAX', 10), 1, 1_000),
     },
     metadata: {
       cacheTtlMs: clamp(int(env, 'AI_METADATA_CACHE_TTL', 86_400), 0, 31_536_000) * 1_000,

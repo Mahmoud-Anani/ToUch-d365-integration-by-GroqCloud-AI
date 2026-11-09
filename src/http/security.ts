@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { RequestHandler } from 'express';
 import type { AppConfig } from '../config';
+import { ForbiddenError } from '../errors';
 
 const CSP = [
   "default-src 'self'",
@@ -35,6 +36,42 @@ export function securityHeaders(config: AppConfig): RequestHandler {
       res.setHeader('Cache-Control', 'no-store');
     }
     next();
+  };
+}
+
+/**
+ * Rejects state-changing browser requests that originate from another site.
+ * Requests without Origin/Sec-Fetch-Site headers (CLI clients) are allowed;
+ * the session cookie itself is HttpOnly and SameSite=Lax.
+ */
+export function sameOriginGuard(): RequestHandler {
+  return (req, _res, next) => {
+    try {
+      if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
+        next();
+        return;
+      }
+      const fetchSite = req.get('sec-fetch-site');
+      if (fetchSite && fetchSite !== 'same-origin' && fetchSite !== 'same-site' && fetchSite !== 'none') {
+        throw new ForbiddenError('Cross-site request was blocked.');
+      }
+      const origin = req.get('origin');
+      if (origin) {
+        let parsed: URL;
+        try {
+          parsed = new URL(origin);
+        } catch {
+          throw new ForbiddenError('Invalid request origin.');
+        }
+        const expected = `${req.protocol}://${req.get('host') ?? ''}`;
+        if (parsed.origin !== expected) {
+          throw new ForbiddenError('Cross-origin request was blocked.');
+        }
+      }
+      next();
+    } catch (error) {
+      next(error);
+    }
   };
 }
 

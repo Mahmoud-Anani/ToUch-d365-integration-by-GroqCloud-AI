@@ -1,4 +1,5 @@
 import { vi, type Mock } from 'vitest';
+import path from 'node:path';
 import { createConfig, type AppConfig } from '../src/config';
 import type { Logger } from '../src/logger';
 import { parseCsdlMetadata } from '../src/metadata/parser';
@@ -6,6 +7,8 @@ import type { MetadataCatalogData } from '../src/metadata/types';
 import { ADVERTISED_ENTITY_SETS, METADATA_XML } from './fixtures/metadata';
 
 export const TEST_BASE_URL = 'https://test.operations.dynamics.com';
+export const TEST_USER = 'test';
+export const TEST_PASSWORD = 'test-password-123';
 
 export function testEnv(overrides: Record<string, string | undefined> = {}): Record<string, string | undefined> {
   return {
@@ -19,6 +22,8 @@ export function testEnv(overrides: Record<string, string | undefined> = {}): Rec
     GROQ_API_KEY: 'test-groq-key',
     APP_TRUST_USER_HEADER: 'false',
     CONVERSATION_STORE: 'memory',
+    SESSION_SECRET: 'test-session-secret-that-is-longer-than-32-characters',
+    USERS_FILE: path.resolve(process.cwd(), 'tests', 'fixtures', 'users.json'),
     ...overrides,
   };
 }

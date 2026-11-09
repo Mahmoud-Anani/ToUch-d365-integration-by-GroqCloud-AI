@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "smoke:d365": "tsx scripts/smoke-d365.ts",
-    "smoke:groq": "tsx scripts/smoke-groq.ts"
+    "smoke:groq": "tsx scripts/smoke-groq.ts",
+    "hash-password": "tsx scripts/hash-password.ts"
   },
   "keywords": [
     "touch-el-zanouki",

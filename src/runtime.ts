@@ -14,6 +14,9 @@ import type { AIProvider } from './ai/types';
 import type { MetadataCatalogData } from './metadata/types';
 import { createConversationStore, type ConversationStore } from './chat/store';
 import { ChatService } from './chat/service';
+import { UserStore } from './auth/users';
+import { SessionService } from './auth/session';
+import { DashboardService } from './dashboard/service';
 
 export interface RuntimeOptions {
   fetchImpl?: FetchLike;
@@ -35,6 +38,9 @@ export interface AppServices {
   aiStatus: () => AIServiceStatus;
   chat: ChatService;
   conversationStore: ConversationStore;
+  users: UserStore;
+  sessions: SessionService;
+  dashboard: DashboardService;
   aiConfigured: boolean;
   d365Configured: boolean;
   d365AuthMode: 'clientCredentials' | 'static' | 'none';
@@ -101,6 +107,13 @@ function createTokenSource(config: AppConfig, logger: Logger, fetchImpl?: FetchL
 
 export function createRuntime(config: AppConfig, options: RuntimeOptions = {}): AppServices {
   const logger = options.logger ?? createLogger(config.logLevel, config.auditLogFile);
+  const users = UserStore.load(config.auth.usersFile);
+  const sessions = new SessionService({
+    secret: config.auth.sessionSecret,
+    ttlMs: config.auth.sessionTtlMs,
+    cookieName: config.auth.cookieName,
+    secure: config.auth.cookieSecure,
+  });
   const token = createTokenSource(config, logger, options.fetchImpl);
   const d365Configured = Boolean(config.d365.baseUrl) && token.mode !== 'none';
 
@@ -125,6 +138,7 @@ export function createRuntime(config: AppConfig, options: RuntimeOptions = {}): 
   const queryBuilder = new QueryBuilder(metadata, config);
   const analytics = new AnalyticsEngine(client, metadata, queryBuilder, config);
   const tools = new ToolRegistry(metadata, queryBuilder, client, analytics, config, logger);
+  const dashboard = new DashboardService({ analytics, queryBuilder, client, metadata, logger });
 
   const configuredProviders = config.ai.providers.map(
     (provider) =>
@@ -181,6 +195,9 @@ export function createRuntime(config: AppConfig, options: RuntimeOptions = {}): 
     aiStatus: () => aiService.status(),
     chat,
     conversationStore,
+    users,
+    sessions,
+    dashboard,
     aiConfigured: configuredProviders.length > 0 || options.aiProvider !== undefined,
     d365Configured,
     d365AuthMode: token.mode,

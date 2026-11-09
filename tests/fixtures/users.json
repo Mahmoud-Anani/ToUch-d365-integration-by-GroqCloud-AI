@@ -1,0 +1,22 @@
+{
+  "users": [
+    {
+      "username": "test",
+      "displayName": "Test Analyst",
+      "role": "admin",
+      "passwordHash": "scrypt$16384$8$1$64$cC1wVgbGe4f1IH58azOW7A$shzOt0fmlUIHLGnctTipAiwfx8xo80QL_PKQLtj_h_zjyUavXqf86QxEZ-j4CgsB3vogeFx3aBaIuKnZaFjwEg"
+    },
+    {
+      "username": "alice",
+      "displayName": "Alice",
+      "role": "analyst",
+      "passwordHash": "scrypt$16384$8$1$64$cC1wVgbGe4f1IH58azOW7A$shzOt0fmlUIHLGnctTipAiwfx8xo80QL_PKQLtj_h_zjyUavXqf86QxEZ-j4CgsB3vogeFx3aBaIuKnZaFjwEg"
+    },
+    {
+      "username": "bob",
+      "displayName": "Bob",
+      "role": "viewer",
+      "passwordHash": "scrypt$16384$8$1$64$cC1wVgbGe4f1IH58azOW7A$shzOt0fmlUIHLGnctTipAiwfx8xo80QL_PKQLtj_h_zjyUavXqf86QxEZ-j4CgsB3vogeFx3aBaIuKnZaFjwEg"
+    }
+  ]
+}

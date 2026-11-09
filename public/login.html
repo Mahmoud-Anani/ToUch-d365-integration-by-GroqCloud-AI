@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en" dir="ltr" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#f5f7f4" id="theme-color-meta" />
+    <title>Touch El-Zanouki | Sign in</title>
+    <link rel="icon" type="image/png" href="./touch-logo.png" />
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./login.css" />
+  </head>
+  <body class="login-page">
+    <main class="login-shell">
+      <section class="login-card" aria-labelledby="login-title">
+        <div class="login-toolbar">
+          <button class="chip-btn" id="lang-toggle" type="button" aria-label="Switch language">
+            العربية
+          </button>
+          <button class="icon-btn" id="theme-toggle" type="button" aria-label="Toggle theme">
+            <svg class="icon-sun" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <circle cx="12" cy="12" r="4"></circle>
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"></path>
+            </svg>
+            <svg class="icon-moon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"></path>
+            </svg>
+          </button>
+        </div>
+
+        <div class="login-brand">
+          <img src="./touch-logo.png" alt="Touch El-Zanouki" width="124" height="65" />
+          <span class="login-brand-copy">
+            <strong data-i18n="brand">Touch El-Zanouki</strong>
+            <small data-i18n="brand_sub">Business intelligence · El-Zenouki Group</small>
+          </span>
+        </div>
+
+        <div class="login-heading">
+          <span class="login-kicker" data-i18n="login_kicker">SECURE WORKSPACE</span>
+          <h1 id="login-title" data-i18n="login_title">Sign in</h1>
+          <p data-i18n="login_body">
+            Use the account provided by your administrator to open the Dynamics 365
+            business dashboard.
+          </p>
+        </div>
+
+        <form class="login-form" id="login-form" autocomplete="on" novalidate>
+          <div class="login-field">
+            <label for="username" data-i18n="username">Username</label>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              autocomplete="username"
+              autocapitalize="none"
+              spellcheck="false"
+              maxlength="64"
+              required
+              data-i18n-placeholder="username_placeholder"
+              placeholder="e.g. admin"
+            />
+          </div>
+          <div class="login-field">
+            <label for="password" data-i18n="password">Password</label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              maxlength="512"
+              required
+              data-i18n-placeholder="password_placeholder"
+              placeholder="Enter your password"
+            />
+          </div>
+          <p class="login-error" id="login-error" role="alert" hidden></p>
+          <button class="login-submit" id="login-submit" type="submit">
+            <span data-i18n="sign_in">Sign in</span>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M5 12h14M13 6l6 6-6 6"></path>
+            </svg>
+          </button>
+        </form>
+
+        <p class="login-note">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 3 5 6v5c0 4.5 3 7.5 7 10 4-2.5 7-5.5 7-10V6l-7-3Z"></path>
+            <path d="m9 12 2 2 4-4"></path>
+          </svg>
+          <span data-i18n="login_note">Read-only access. Sessions expire automatically.</span>
+        </p>
+      </section>
+
+      <aside class="login-aside" aria-hidden="true">
+        <div class="login-aside-inner">
+          <span class="login-kicker" data-i18n="aside_kicker">DYNAMICS 365 · READ ONLY</span>
+          <h2 data-i18n="aside_title">One clear view of the business</h2>
+          <p data-i18n="aside_body">
+            Customer, product, purchasing, finance and organisation data from the
+            integration map, brought together in one bilingual workspace.
+          </p>
+          <ul class="login-points">
+            <li data-i18n="aside_point_1">Live D365 analysis, no record changes</li>
+            <li data-i18n="aside_point_2">Bilingual English and Arabic interface</li>
+            <li data-i18n="aside_point_3">Private sessions with signed, HttpOnly cookies</li>
+          </ul>
+        </div>
+      </aside>
+    </main>
+
+    <script src="./login.js" defer></script>
+  </body>
+</html>

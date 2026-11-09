@@ -25,7 +25,7 @@
       subtitle_default: 'Live ERP insights for the Touch business',
       subtitle_messages: '{n} messages · updated {when}',
       empty_title: 'A clearer view of the Touch business',
-      dashboard_kicker: 'BUSINESS OVERVIEW',
+      dashboard_kicker: 'D365 INTEGRATION',
       dashboard_cta: 'Ask your first question',
       workspace_status: 'Workspace status',
       workspace_status_hint: 'A live view of the tools behind your answers',
@@ -112,11 +112,67 @@
       error_code: 'Error: {code}',
       offline: 'Offline',
       online: 'Online',
+      nav_dashboard: 'Dashboard',
+      nav_chat: 'Chat',
+      sidebar_label: 'Workspace navigation',
+      conversations: 'Conversations',
+      view_dashboard_title: 'D365 Integration Dashboard',
+      view_dashboard_subtitle: 'Live Dynamics 365 · Analysis &amp; System Modules',
+      view_chat_title: 'Conversations',
+      view_chat_subtitle: 'Ask questions about your D365 business data',
+      dashboard_title: 'Live Dynamics 365 data, one clear view',
+      dashboard_body:
+        'Live Dynamics 365 analysis and read-only records from the integration map, presented in one bilingual workspace.',
+      dashboard_updated: 'Updated {when}',
+      dashboard_loading: 'Loading dashboard…',
+      dashboard_refreshed: 'Dashboard refreshed.',
+      refresh: 'Refresh',
+      refreshing: 'Refreshing…',
+      open_chat: 'Ask a question',
+      analysis_title: 'D365 data analysis',
+      analysis_hint: 'Live counts and breakdowns from the entities used by the assistant',
+      analysis_unavailable: 'Analysis unavailable.',
+      analysis_groups: '{n} groups',
+      analysis_scanned: '{n} records scanned',
+      analysis_partial: 'Partial scan',
+      kpi_empty: 'Module counts are not available yet.',
+      kpi_unavailable: 'Unavailable',
+      modules_title: 'System modules',
+      modules_hint: 'Browse read-only records from the integration map entities',
+      modules_available: '{available} of {total} modules available',
+      module_state_ok: 'Available',
+      module_state_unavailable: 'Unavailable',
+      module_records: '{n} records',
+      module_records_unknown: 'Records',
+      module_browse: 'Browse',
+      module_search_label: 'Search records',
+      module_search_placeholder: 'Search records…',
+      search: 'Search',
+      clear: 'Clear',
+      previous: 'Previous',
+      next: 'Next',
+      page_info: '{from}–{to} of {total}',
+      page_info_unknown: '{from}–{to}',
+      module_loading: 'Loading records…',
+      module_no_records: 'No records found.',
+      module_search_hint: 'Search is not available for this module.',
+      module_records_error: 'Records could not be loaded.',
+      module_total_unknown: 'Total unavailable',
+      close: 'Close',
+      sign_out: 'Sign out',
+      signed_in_as: 'Signed in as {name}',
+      session_expired: 'Your session expired. Please sign in again.',
+      category_sales: 'Sales',
+      category_procurement: 'Procurement',
+      category_finance: 'Finance',
+      category_organization: 'Organization',
+      status_ok: 'Live',
+      status_partial: 'Partial',
     },
     ar: {
       skip: 'انتقل إلى حقل الرسالة',
       brand: 'Touch El-Zanouki',
-      brand_sub: 'ذكاء الأعمال · مجموعة الزنوقي',
+      brand_sub: 'ذكاء الأعمال · مجموعة الزنوكي',
       close_sidebar: 'إغلاق الشريط الجانبي',
       open_sidebar: 'فتح الشريط الجانبي',
       new_chat: 'محادثة جديدة',
@@ -132,7 +188,7 @@
       subtitle_default: 'رؤى مباشرة من نظام ERP لأعمال Touch',
       subtitle_messages: '{n} رسالة · آخر تحديث {when}',
       empty_title: 'رؤية أوضح لأعمال Touch',
-      dashboard_kicker: 'نظرة عامة على الأعمال',
+      dashboard_kicker: 'تكامل D365',
       dashboard_cta: 'اطرح سؤالك الأول',
       workspace_status: 'حالة مساحة العمل',
       workspace_status_hint: 'عرض مباشر للأدوات التي تدعم إجاباتك',
@@ -219,6 +275,62 @@
       error_code: 'خطأ: {code}',
       offline: 'غير متصل',
       online: 'متصل',
+      nav_dashboard: 'لوحة المعلومات',
+      nav_chat: 'المحادثة',
+      sidebar_label: 'التنقل في مساحة العمل',
+      conversations: 'المحادثات',
+      view_dashboard_title: 'لوحة تكامل D365',
+      view_dashboard_subtitle: 'بيانات D365 المباشرة · التحليل ووحدات النظام',
+      view_chat_title: 'المحادثات',
+      view_chat_subtitle: 'اسأل عن بيانات أعمال D365',
+      dashboard_title: 'رؤية واحدة واضحة للأعمال',
+      dashboard_body:
+        'تحليل مباشر من Dynamics 365 وسجلات للقراءة فقط من خريطة التكامل، في مساحة عمل واحدة ثنائية اللغة.',
+      dashboard_updated: 'آخر تحديث {when}',
+      dashboard_loading: 'جارٍ تحميل لوحة المعلومات…',
+      dashboard_refreshed: 'تم تحديث لوحة المعلومات.',
+      refresh: 'تحديث',
+      refreshing: 'جارٍ التحديث…',
+      open_chat: 'اطرح سؤالاً',
+      analysis_title: 'تحليل بيانات D365',
+      analysis_hint: 'أعداد وتحليلات مباشرة من الكيانات التي يستخدمها المساعد',
+      analysis_unavailable: 'التحليل غير متاح.',
+      analysis_groups: '{n} مجموعة',
+      analysis_scanned: 'تم فحص {n} سجل',
+      analysis_partial: 'فحص جزئي',
+      kpi_empty: 'أعداد الوحدات غير متاحة بعد.',
+      kpi_unavailable: 'غير متاح',
+      modules_title: 'وحدات النظام',
+      modules_hint: 'استعرض سجلات للقراءة فقط من كيانات خريطة التكامل',
+      modules_available: '{available} من {total} وحدة متاحة',
+      module_state_ok: 'متاح',
+      module_state_unavailable: 'غير متاح',
+      module_records: '{n} سجل',
+      module_records_unknown: 'السجلات',
+      module_browse: 'استعراض',
+      module_search_label: 'البحث في السجلات',
+      module_search_placeholder: 'ابحث في السجلات…',
+      search: 'بحث',
+      clear: 'مسح',
+      previous: 'السابق',
+      next: 'التالي',
+      page_info: '{from}–{to} من {total}',
+      page_info_unknown: '{from}–{to}',
+      module_loading: 'جارٍ تحميل السجلات…',
+      module_no_records: 'لا توجد سجلات.',
+      module_search_hint: 'البحث غير متاح لهذه الوحدة.',
+      module_records_error: 'تعذر تحميل السجلات.',
+      module_total_unknown: 'الإجمالي غير متاح',
+      close: 'إغلاق',
+      sign_out: 'تسجيل الخروج',
+      signed_in_as: 'مسجل الدخول باسم {name}',
+      session_expired: 'انتهت جلستك. يرجى تسجيل الدخول مجدداً.',
+      category_sales: 'المبيعات',
+      category_procurement: 'المشتريات',
+      category_finance: 'المالية',
+      category_organization: 'التنظيم',
+      status_ok: 'مباشر',
+      status_partial: 'جزئي',
     },
   };
 
@@ -241,12 +353,35 @@
   const state = {
     lang: localStorage.getItem(LS_LANG) || (String(navigator.language || 'en').toLowerCase().startsWith('ar') ? 'ar' : 'en'),
     theme: localStorage.getItem(LS_THEME) || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
+    view: 'dashboard',
+    user: null,
+    redirecting: false,
     conversations: [],
+    conversationsLoaded: false,
+    conversationsLoading: false,
     current: null,
     sending: false,
     abort: null,
     statusSteps: [],
     health: null,
+    dashboard: {
+      overview: null,
+      analysis: null,
+      modules: null,
+      loading: false,
+      loaded: false,
+      error: null,
+      refreshedAt: null,
+    },
+    activeModule: null,
+    records: {
+      loading: false,
+      error: null,
+      search: '',
+      top: 25,
+      skip: 0,
+      data: null,
+    },
     modal: null,
     modalBusy: false,
     lastFocus: null,
@@ -263,24 +398,56 @@
     sidebarBackdrop: $('sidebar-backdrop'),
     sidebarClose: $('sidebar-close'),
     menuToggle: $('menu-toggle'),
+    dashboardNav: $('dashboard-nav'),
+    chatNav: $('chat-nav'),
+    conversationSection: $('conversation-section'),
     newChat: $('new-chat'),
-    overviewNav: $('overview-nav'),
-    dashboardAsk: $('dashboard-ask'),
     conversations: $('conversation-list'),
     refreshConversations: $('refresh-conversations'),
     metadataPill: $('metadata-pill'),
     metadataText: $('metadata-text'),
     refreshMetadata: $('refresh-metadata'),
+    accountCard: $('account-card'),
+    accountAvatar: $('account-avatar'),
+    accountName: $('account-name'),
+    accountRole: $('account-role'),
+    logoutBtn: $('logout-btn'),
+    viewTitle: $('view-title'),
+    viewSubtitle: $('view-subtitle'),
+    topbarUser: $('topbar-user'),
+    langToggle: $('lang-toggle'),
+    themeToggle: $('theme-toggle'),
+    dashboardView: $('dashboard-view'),
+    dashboardScroll: $('dashboard-scroll'),
+    dashboardUpdated: $('dashboard-updated'),
+    refreshDashboard: $('refresh-dashboard'),
+    dashboardGoChat: $('dashboard-go-chat'),
     erpStatus: $('erp-status'),
     erpStatusDot: $('erp-status-dot'),
     aiStatus: $('ai-status'),
     aiStatusDot: $('ai-status-dot'),
     catalogStatus: $('catalog-status'),
     catalogStatusDot: $('catalog-status-dot'),
-    chatTitle: $('chat-title'),
-    chatSubtitle: $('chat-subtitle'),
-    langToggle: $('lang-toggle'),
-    themeToggle: $('theme-toggle'),
+    kpiGrid: $('kpi-grid'),
+    analysisGrid: $('analysis-grid'),
+    analysisStatus: $('analysis-status'),
+    modulesStatus: $('modules-status'),
+    moduleGrid: $('module-grid'),
+    moduleBrowser: $('module-browser'),
+    moduleBrowserClose: $('module-browser-close'),
+    moduleBrowserCategory: $('module-browser-category'),
+    moduleBrowserTitle: $('module-browser-title'),
+    moduleBrowserDescription: $('module-browser-description'),
+    moduleBrowserCount: $('module-browser-count'),
+    moduleSearch: $('module-search'),
+    moduleSearchInput: $('module-search-input'),
+    moduleSearchBtn: $('module-search-btn'),
+    moduleSearchClear: $('module-search-clear'),
+    moduleTableWrap: $('module-table-wrap'),
+    modulePrev: $('module-prev'),
+    modulePageInfo: $('module-page-info'),
+    moduleNext: $('module-next'),
+    chatView: $('chat-view'),
     messages: $('messages'),
     empty: $('empty-state'),
     suggestions: $('suggestions'),
@@ -517,7 +684,7 @@
   function applyLanguage() {
     dom.html.lang = state.lang;
     dom.html.dir = state.lang === 'ar' ? 'rtl' : 'ltr';
-    document.title = `${t('brand')} · ${state.lang === 'ar' ? 'ذكاء الأعمال' : 'Business Intelligence'}`;
+    document.title = `${t('brand')} · ${t(state.view === 'dashboard' ? 'view_dashboard_title' : 'view_chat_title')}`;
     document.querySelectorAll('[data-i18n]').forEach((element) => {
       const key = element.getAttribute('data-i18n');
       if (key) element.textContent = t(key);
@@ -536,29 +703,671 @@
     dom.modalConfirm.textContent = t('confirm');
     renderSuggestions();
     applyTheme();
-    updateTitle();
+    updateViewChrome();
     updateMetaPill(state.health ? state.health.metadata : null);
-    if (state.current && !state.sending) renderConversation(state.current);
+    renderAccount();
+    renderDashboard();
+    if (state.current && !state.sending && state.view === 'chat') renderConversation(state.current);
+  }
+
+  function updateViewChrome() {
+    document.title = `${t('brand')} · ${t(state.view === 'dashboard' ? 'view_dashboard_title' : 'view_chat_title')}`;
+    if (state.view === 'dashboard') {
+      dom.viewTitle.textContent = t('view_dashboard_title');
+      dom.viewSubtitle.textContent = t('view_dashboard_subtitle');
+      return;
+    }
+    dom.viewTitle.textContent = state.current ? state.current.title : t('view_chat_title');
+    dom.viewSubtitle.textContent = state.current
+      ? t('subtitle_messages', {
+          n: state.current.messages.length,
+          when: formatRelative(state.current.updatedAt),
+        })
+      : t('view_chat_subtitle');
   }
 
   function updateTitle() {
-    dom.chatTitle.textContent = state.current ? state.current.title : t('overview');
-    if (state.current) {
-      dom.chatSubtitle.textContent = t('subtitle_messages', {
-        n: state.current.messages.length,
-        when: formatRelative(state.current.updatedAt),
-      });
-    } else {
-      dom.chatSubtitle.textContent = t('subtitle_default');
-    }
+    if (state.view === 'chat') updateViewChrome();
   }
 
   function setEmptyVisible(visible) {
     dom.empty.hidden = !visible;
     dom.messages.hidden = visible;
-    dom.overviewNav.classList.toggle('active', visible);
-    if (visible) dom.overviewNav.setAttribute('aria-current', 'page');
-    else dom.overviewNav.removeAttribute('aria-current');
+  }
+
+  // --- Session and account -------------------------------------------------
+
+  function redirectToLogin() {
+    if (state.redirecting) return;
+    state.redirecting = true;
+    const next = `${window.location.pathname}${window.location.search}`;
+    const safeNext = next.startsWith('/') && !next.startsWith('//') ? next : '/';
+    window.location.replace(`/login?next=${encodeURIComponent(safeNext)}`);
+  }
+
+  function initials(value) {
+    const parts = String(value || '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '?';
+    if (parts.length === 1) return parts[0].slice(0, 1).toUpperCase();
+    return `${parts[0].slice(0, 1)}${parts[parts.length - 1].slice(0, 1)}`.toUpperCase();
+  }
+
+  function renderAccount() {
+    if (!state.user) {
+      dom.accountCard.hidden = true;
+      dom.topbarUser.hidden = true;
+      return;
+    }
+    const name = state.user.displayName || state.user.username || '';
+    dom.accountName.textContent = name;
+    dom.accountRole.textContent = state.user.role || '';
+    dom.accountAvatar.textContent = initials(name);
+    dom.accountCard.hidden = false;
+    dom.topbarUser.hidden = false;
+    dom.topbarUser.textContent = t('signed_in_as', { name });
+    dom.logoutBtn.title = t('sign_out');
+    dom.accountCard.title = state.user.role ? `${name} · ${state.user.role}` : name;
+  }
+
+  async function logout() {
+    dom.logoutBtn.disabled = true;
+    try {
+      await api('/api/auth/logout', { method: 'POST' });
+    } catch {
+      // The redirect still applies when the server cannot be reached.
+    }
+    state.user = null;
+    window.location.replace('/login');
+  }
+
+  async function loadSession() {
+    try {
+      const session = await api('/api/auth/me');
+      if (!session || !session.authenticated || !session.user) {
+        redirectToLogin();
+        return false;
+      }
+      state.user = session.user;
+      renderAccount();
+      return true;
+    } catch (error) {
+      if (error && error.status === 401) redirectToLogin();
+      else toast(error && error.message ? error.message : t('network_error'), true);
+      return false;
+    }
+  }
+
+  // --- View switching ------------------------------------------------------
+
+  function setView(view, options) {
+    const next = view === 'chat' ? 'chat' : 'dashboard';
+    const settings = options || {};
+    state.view = next;
+    dom.dashboardView.hidden = next !== 'dashboard';
+    dom.chatView.hidden = next !== 'chat';
+    dom.conversationSection.hidden = next !== 'chat';
+    dom.dashboardNav.classList.toggle('active', next === 'dashboard');
+    dom.chatNav.classList.toggle('active', next === 'chat');
+    if (next === 'dashboard') dom.dashboardNav.setAttribute('aria-current', 'page');
+    else dom.dashboardNav.removeAttribute('aria-current');
+    if (next === 'chat') dom.chatNav.setAttribute('aria-current', 'page');
+    else dom.chatNav.removeAttribute('aria-current');
+    updateViewChrome();
+    if (!settings.silent) closeSidebar();
+    if (next === 'dashboard') {
+      if (!settings.skipLoad) void ensureDashboard();
+    } else {
+      if (!state.conversationsLoaded) void bootstrapConversations();
+      if (!settings.skipFocus) {
+        window.requestAnimationFrame(() => dom.input.focus());
+      }
+    }
+  }
+
+  // --- Dashboard -----------------------------------------------------------
+
+  function localizedText(value) {
+    if (!value || typeof value !== 'object') return '';
+    return state.lang === 'ar' ? value.ar || value.en || '' : value.en || value.ar || '';
+  }
+
+  function humanizeField(value) {
+    const text = String(value || '');
+    const spaced = text.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ');
+    return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+  }
+
+  function categoryKey(category) {
+    return `category_${category || 'organization'}`;
+  }
+
+  function formatCount(value) {
+    return typeof value === 'number' && Number.isFinite(value) ? numberFormat(value) : '—';
+  }
+
+  function moduleSummary(id) {
+    const overview = state.dashboard.overview;
+    if (overview && Array.isArray(overview.modules)) {
+      const found = overview.modules.find((module) => module.id === id);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  function moduleDefinition(id) {
+    const catalog = state.dashboard.modules;
+    if (catalog && Array.isArray(catalog.modules)) {
+      return catalog.modules.find((module) => module.id === id) || null;
+    }
+    return null;
+  }
+
+  function updateDashboardChrome() {
+    const dashboard = state.dashboard;
+    dom.refreshDashboard.disabled = dashboard.loading;
+    dom.refreshDashboard.setAttribute('aria-busy', dashboard.loading ? 'true' : 'false');
+    const refreshLabel = dom.refreshDashboard.querySelector('[data-i18n="refresh"]');
+    if (refreshLabel) refreshLabel.textContent = t(dashboard.loading ? 'refreshing' : 'refresh');
+
+    if (dashboard.refreshedAt) {
+      dom.dashboardUpdated.textContent = t('dashboard_updated', {
+        when: formatDateTime(dashboard.refreshedAt),
+      });
+    } else {
+      dom.dashboardUpdated.textContent = dashboard.loading ? t('dashboard_loading') : '';
+    }
+
+    const overview = dashboard.overview;
+    if (overview) {
+      dom.modulesStatus.textContent = t('modules_available', {
+        available: numberFormat(overview.availableModules ?? 0),
+        total: numberFormat(overview.totalModules ?? 0),
+      });
+    } else {
+      dom.modulesStatus.textContent = dashboard.loading ? t('dashboard_loading') : '';
+    }
+
+    const analysis = dashboard.analysis;
+    if (analysis && Array.isArray(analysis.breakdowns)) {
+      const live = analysis.breakdowns.filter((item) => item.status === 'ok').length;
+      dom.analysisStatus.textContent = `${numberFormat(live)} / ${numberFormat(analysis.breakdowns.length)}`;
+    } else {
+      dom.analysisStatus.textContent = '';
+    }
+  }
+
+  function renderDashboard() {
+    updateDashboardChrome();
+    renderKpis();
+    renderAnalysis();
+    renderModules();
+    if (state.activeModule) renderModuleBrowser();
+  }
+
+  function dashboardNote(message, isError) {
+    const note = document.createElement('p');
+    note.className = `dashboard-empty${isError ? ' error' : ''}`;
+    note.textContent = message;
+    return note;
+  }
+
+  function renderKpis() {
+    dom.kpiGrid.replaceChildren();
+    const overview = state.dashboard.overview;
+    if (!overview || !Array.isArray(overview.modules) || overview.modules.length === 0) {
+      const message = state.dashboard.loading
+        ? t('dashboard_loading')
+        : state.dashboard.error || t('kpi_empty');
+      dom.kpiGrid.append(dashboardNote(message, Boolean(state.dashboard.error)));
+      return;
+    }
+
+    let featured = overview.modules.filter((module) => module.featured);
+    if (featured.length === 0) featured = overview.modules.slice(0, 6);
+
+    for (const module of featured) {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = `kpi-card${module.status === 'ok' ? '' : ' unavailable'}`;
+      card.addEventListener('click', () => openModule(module.id));
+      if (module.status !== 'ok' && module.error) card.title = module.error;
+
+      const label = document.createElement('span');
+      label.className = 'kpi-label';
+      label.textContent = localizedText(module.title);
+
+      const value = document.createElement('strong');
+      value.className = 'kpi-value';
+      value.textContent = module.status === 'ok' ? formatCount(module.count) : '—';
+
+      const meta = document.createElement('span');
+      meta.className = 'kpi-meta';
+      meta.textContent =
+        module.status === 'ok'
+          ? `${t(categoryKey(module.category))} · ${module.entitySet}`
+          : `${t('kpi_unavailable')} · ${module.entitySet}`;
+
+      card.append(label, value, meta);
+      dom.kpiGrid.append(card);
+    }
+  }
+
+  function renderAnalysis() {
+    dom.analysisGrid.replaceChildren();
+    const analysis = state.dashboard.analysis;
+    if (!analysis || !Array.isArray(analysis.breakdowns) || analysis.breakdowns.length === 0) {
+      const message = state.dashboard.loading
+        ? t('dashboard_loading')
+        : state.dashboard.error || t('analysis_unavailable');
+      dom.analysisGrid.append(dashboardNote(message, Boolean(state.dashboard.error)));
+      return;
+    }
+    for (const breakdown of analysis.breakdowns) {
+      dom.analysisGrid.append(renderBreakdownCard(breakdown));
+    }
+  }
+
+  function renderBreakdownCard(breakdown) {
+    const card = document.createElement('article');
+    card.className = 'analysis-card';
+
+    const head = document.createElement('header');
+    head.className = 'analysis-head';
+    const title = document.createElement('h3');
+    title.textContent = localizedText(breakdown.title);
+    const entity = document.createElement('span');
+    entity.className = 'entity-tag';
+    entity.textContent = breakdown.entitySet;
+    head.append(title, entity);
+    card.append(head);
+
+    if (breakdown.status !== 'ok') {
+      card.append(dashboardNote(breakdown.error || t('analysis_unavailable'), true));
+      return card;
+    }
+
+    const groups = Array.isArray(breakdown.groups) ? breakdown.groups : [];
+    if (groups.length === 0) {
+      card.append(dashboardNote(t('module_no_records'), false));
+    } else {
+      const list = document.createElement('ul');
+      list.className = 'bar-list';
+      const max = Math.max(...groups.map((group) => Number(group.count) || 0), 1);
+      for (const group of groups) {
+        const item = document.createElement('li');
+        item.className = 'bar-row';
+
+        const label = document.createElement('span');
+        label.className = 'bar-label';
+        label.textContent = group.key || '—';
+        label.title = group.key || '';
+
+        const track = document.createElement('span');
+        track.className = 'bar-track';
+        const fill = document.createElement('span');
+        fill.className = 'bar-fill';
+        fill.style.width = `${Math.max(2, Math.round(((Number(group.count) || 0) / max) * 100))}%`;
+        track.append(fill);
+
+        const count = document.createElement('span');
+        count.className = 'bar-count';
+        count.textContent = formatCount(group.count);
+
+        item.append(label, track, count);
+        list.append(item);
+      }
+      card.append(list);
+    }
+
+    const foot = document.createElement('footer');
+    foot.className = 'analysis-foot';
+    const groupCount = document.createElement('span');
+    groupCount.textContent = t('analysis_groups', {
+      n: formatCount(breakdown.groupCount ?? groups.length),
+    });
+    foot.append(groupCount);
+    if (typeof breakdown.recordsScanned === 'number') {
+      const scanned = document.createElement('span');
+      scanned.textContent = t('analysis_scanned', {
+        n: formatCount(breakdown.recordsScanned),
+      });
+      foot.append(scanned);
+    }
+    if (breakdown.complete === false) {
+      const badge = document.createElement('span');
+      badge.className = 'badge partial';
+      badge.textContent = t('analysis_partial');
+      foot.append(badge);
+    }
+    card.append(foot);
+    return card;
+  }
+
+  function renderModules() {
+    dom.moduleGrid.replaceChildren();
+    const overview = state.dashboard.overview;
+    let modules = overview && Array.isArray(overview.modules) ? overview.modules : [];
+    if (
+      modules.length === 0 &&
+      state.dashboard.modules &&
+      Array.isArray(state.dashboard.modules.modules)
+    ) {
+      modules = state.dashboard.modules.modules.map((module) => ({
+        id: module.id,
+        entitySet: module.entitySet,
+        title: module.title,
+        description: module.description,
+        category: module.category,
+        featured: module.featured === true,
+        count: null,
+        status: 'unavailable',
+      }));
+    }
+
+    if (modules.length === 0) {
+      const message = state.dashboard.loading
+        ? t('dashboard_loading')
+        : state.dashboard.error || t('kpi_empty');
+      dom.moduleGrid.append(dashboardNote(message, Boolean(state.dashboard.error)));
+      return;
+    }
+
+    for (const module of modules) {
+      const card = document.createElement('article');
+      card.className = 'module-card';
+      if (state.activeModule === module.id) card.classList.add('active');
+
+      const top = document.createElement('div');
+      top.className = 'module-card-top';
+      const category = document.createElement('span');
+      category.className = 'module-category';
+      category.textContent = t(categoryKey(module.category));
+      const stateBadge = document.createElement('span');
+      stateBadge.className = `module-state ${module.status === 'ok' ? 'ok' : 'warn'}`;
+      stateBadge.textContent = t(
+        module.status === 'ok' ? 'module_state_ok' : 'module_state_unavailable',
+      );
+      top.append(category, stateBadge);
+
+      const title = document.createElement('h3');
+      title.textContent = localizedText(module.title);
+      const description = document.createElement('p');
+      description.textContent = localizedText(module.description);
+
+      const foot = document.createElement('div');
+      foot.className = 'module-card-foot';
+      const metric = document.createElement('span');
+      metric.className = 'module-metric';
+      if (module.status === 'ok') {
+        const strong = document.createElement('strong');
+        strong.textContent = formatCount(module.count);
+        const suffix = document.createElement('span');
+        suffix.textContent = ` ${t('module_records_unknown').toLowerCase()}`;
+        metric.append(strong, suffix);
+      } else {
+        metric.textContent = t('module_total_unknown');
+      }
+      const open = document.createElement('button');
+      open.type = 'button';
+      open.className = 'module-open';
+      open.textContent = t('module_browse');
+      open.addEventListener('click', () => openModule(module.id));
+      foot.append(metric, open);
+
+      card.append(top, title, description, foot);
+      if (module.status !== 'ok' && module.error) card.title = module.error;
+      dom.moduleGrid.append(card);
+    }
+  }
+
+  async function ensureDashboard() {
+    if (state.dashboard.loaded || state.dashboard.loading) return;
+    await loadDashboard();
+  }
+
+  async function loadDashboard(options) {
+    if (state.dashboard.loading) return;
+    const force = Boolean(options && options.force);
+    state.dashboard.loading = true;
+    state.dashboard.error = null;
+    updateDashboardChrome();
+    renderDashboard();
+
+    try {
+      const results = await Promise.allSettled([
+        api(`/api/dashboard/overview${force ? '?refresh=true' : ''}`),
+        api('/api/dashboard/analysis'),
+        api('/api/dashboard/modules'),
+      ]);
+      const [overview, analysis, modules] = results;
+      if (overview.status === 'fulfilled') state.dashboard.overview = overview.value;
+      if (analysis.status === 'fulfilled') state.dashboard.analysis = analysis.value;
+      if (modules.status === 'fulfilled') state.dashboard.modules = modules.value;
+
+      const failures = results.filter((result) => result.status === 'rejected');
+      state.dashboard.loaded = results.some((result) => result.status === 'fulfilled');
+      if (failures.length > 0) {
+        const reason = failures[0].reason;
+        state.dashboard.error = reason && reason.message ? reason.message : t('request_failed');
+      }
+      state.dashboard.refreshedAt = new Date().toISOString();
+      if (force) toast(state.dashboard.error || t('dashboard_refreshed'), Boolean(state.dashboard.error));
+    } catch (error) {
+      state.dashboard.error = error && error.message ? error.message : t('request_failed');
+      toast(state.dashboard.error, true);
+    } finally {
+      state.dashboard.loading = false;
+      renderDashboard();
+      updateDashboardChrome();
+    }
+  }
+
+  // --- Module record browser ----------------------------------------------
+
+  function openModule(id) {
+    const summary = moduleSummary(id);
+    const definition = moduleDefinition(id);
+    if (!summary && !definition) return;
+    state.activeModule = id;
+    state.records = { loading: true, error: null, search: '', top: 25, skip: 0, data: null };
+    setView('dashboard', { silent: true });
+    dom.moduleBrowser.hidden = false;
+    renderDashboard();
+    void loadModuleRecords();
+    window.requestAnimationFrame(() => {
+      try {
+        dom.moduleBrowser.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch {
+        // Older browsers can ignore smooth scrolling.
+      }
+    });
+  }
+
+  function closeModule() {
+    state.activeModule = null;
+    state.records = { loading: false, error: null, search: '', top: 25, skip: 0, data: null };
+    dom.moduleBrowser.hidden = true;
+    dom.moduleBrowserTitle.textContent = '';
+    dom.moduleBrowserDescription.textContent = '';
+    dom.moduleBrowserCategory.textContent = '';
+    dom.moduleBrowserCount.textContent = '';
+    dom.moduleTableWrap.replaceChildren();
+    dom.modulePageInfo.textContent = '';
+    renderModules();
+  }
+
+  function renderModuleBrowser() {
+    if (!state.activeModule) return;
+    const summary = moduleSummary(state.activeModule);
+    const definition = moduleDefinition(state.activeModule);
+    const title = summary ? summary.title : definition ? definition.title : null;
+    const description = summary ? summary.description : definition ? definition.description : null;
+    const category = summary ? summary.category : definition ? definition.category : '';
+    const entitySet = summary ? summary.entitySet : definition ? definition.entitySet : '';
+
+    dom.moduleBrowser.hidden = false;
+    dom.moduleBrowserTitle.textContent = localizedText(title) || state.activeModule;
+    dom.moduleBrowserDescription.textContent = localizedText(description) || '';
+    dom.moduleBrowserCategory.textContent = category
+      ? `${t(categoryKey(category))} · ${entitySet}`
+      : entitySet;
+
+    const supportsSearch = Boolean(definition && definition.searchField);
+    dom.moduleSearch.hidden = !supportsSearch;
+    dom.moduleSearchInput.disabled = !supportsSearch || state.records.loading;
+    dom.moduleSearchBtn.disabled = !supportsSearch || state.records.loading;
+    dom.moduleSearchClear.disabled =
+      !supportsSearch || state.records.loading || !state.records.search;
+    if (!supportsSearch) dom.moduleSearchInput.value = '';
+    else if (document.activeElement !== dom.moduleSearchInput) {
+      dom.moduleSearchInput.value = state.records.search;
+    }
+
+    const data = state.records.data;
+    if (data && data.module) {
+      dom.moduleBrowserCount.textContent =
+        typeof data.total === 'number'
+          ? t('module_records', { n: formatCount(data.total) })
+          : t('module_records_unknown');
+    } else {
+      dom.moduleBrowserCount.textContent = '';
+    }
+
+    renderModuleTable();
+    renderModulePager();
+  }
+
+  function renderModuleTable() {
+    dom.moduleTableWrap.replaceChildren();
+    if (state.records.loading) {
+      dom.moduleTableWrap.append(dashboardNote(t('module_loading'), false));
+      return;
+    }
+    if (state.records.error) {
+      dom.moduleTableWrap.append(
+        dashboardNote(state.records.error || t('module_records_error'), true),
+      );
+      return;
+    }
+
+    const data = state.records.data;
+    if (!data || !Array.isArray(data.records) || data.records.length === 0) {
+      dom.moduleTableWrap.append(dashboardNote(t('module_no_records'), false));
+      return;
+    }
+
+    const columns =
+      Array.isArray(data.columns) && data.columns.length > 0
+        ? data.columns
+        : Object.keys(data.records[0] || {}).map((name) => ({ name, kind: 'unknown' }));
+
+    const wrap = document.createElement('div');
+    wrap.className = 'data-table-wrap module-table';
+    const table = document.createElement('table');
+    table.className = 'data-table';
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+    for (const column of columns) {
+      const th = document.createElement('th');
+      th.textContent = humanizeField(column.name);
+      th.title = column.name;
+      headRow.append(th);
+    }
+    thead.append(headRow);
+
+    const tbody = document.createElement('tbody');
+    for (const record of data.records) {
+      const tr = document.createElement('tr');
+      for (const column of columns) {
+        const td = document.createElement('td');
+        const value = record ? record[column.name] : null;
+        td.textContent = formatCell(value, column.kind);
+        if (column.kind === 'number') td.className = 'num';
+        tr.append(td);
+      }
+      tbody.append(tr);
+    }
+
+    table.append(thead, tbody);
+    wrap.append(table);
+    dom.moduleTableWrap.append(wrap);
+  }
+
+  function renderModulePager() {
+    const data = state.records.data;
+    const loading = state.records.loading;
+    const records = data && Array.isArray(data.records) ? data.records : [];
+    const skip = data && typeof data.skip === 'number' ? data.skip : state.records.skip;
+    const total = data && typeof data.total === 'number' ? data.total : null;
+    const from = records.length > 0 ? skip + 1 : 0;
+    const to = skip + records.length;
+
+    if (records.length === 0) {
+      dom.modulePageInfo.textContent = '';
+    } else if (total !== null) {
+      dom.modulePageInfo.textContent = t('page_info', {
+        from: formatCount(from),
+        to: formatCount(to),
+        total: formatCount(total),
+      });
+    } else {
+      dom.modulePageInfo.textContent = t('page_info_unknown', {
+        from: formatCount(from),
+        to: formatCount(to),
+      });
+    }
+
+    dom.modulePrev.disabled = loading || skip <= 0;
+    dom.moduleNext.disabled = loading || !(data && data.hasMore);
+  }
+
+  async function loadModuleRecords() {
+    if (!state.activeModule) return;
+    const moduleId = state.activeModule;
+    state.records.loading = true;
+    state.records.error = null;
+    renderModuleBrowser();
+
+    const params = new URLSearchParams();
+    params.set('top', String(state.records.top));
+    params.set('skip', String(state.records.skip));
+    if (state.records.search) params.set('search', state.records.search);
+
+    try {
+      const data = await api(
+        `/api/dashboard/modules/${encodeURIComponent(moduleId)}/records?${params.toString()}`,
+      );
+      if (state.activeModule !== moduleId) return;
+      state.records.data = data;
+      state.records.error = null;
+      if (typeof data.top === 'number') state.records.top = data.top;
+      if (typeof data.skip === 'number') state.records.skip = data.skip;
+    } catch (error) {
+      if (state.activeModule !== moduleId) return;
+      state.records.error = error && error.message ? error.message : t('module_records_error');
+      state.records.data = null;
+    } finally {
+      if (state.activeModule === moduleId) {
+        state.records.loading = false;
+        renderModuleBrowser();
+      }
+    }
+  }
+
+  function submitModuleSearch(event) {
+    event.preventDefault();
+    if (!state.activeModule || state.records.loading) return;
+    state.records.search = dom.moduleSearchInput.value.trim();
+    state.records.skip = 0;
+    void loadModuleRecords();
+  }
+
+  function clearModuleSearch() {
+    if (!state.activeModule || state.records.loading) return;
+    state.records.search = '';
+    state.records.skip = 0;
+    dom.moduleSearchInput.value = '';
+    void loadModuleRecords();
   }
 
   function renderSuggestions() {
@@ -712,6 +1521,7 @@
 
     if (!response.ok) {
       const error = (payload && payload.error) || {};
+      if (response.status === 401 && path !== '/api/auth/me') redirectToLogin();
       throw new ApiError(
         error.message || t('request_failed'),
         response.status,
@@ -866,6 +1676,7 @@
     try {
       const data = await api('/api/conversations');
       state.conversations = Array.isArray(data && data.conversations) ? data.conversations : [];
+      state.conversationsLoaded = true;
       renderConversations();
       if (showToast) toast(t('conversations_refreshed'));
     } catch (error) {
@@ -878,6 +1689,7 @@
       toast(t('wait'));
       return;
     }
+    setView('chat', { silent: true, skipFocus: true });
     try {
       const data = await api(`/api/conversations/${encodeURIComponent(id)}`);
       state.current = data.conversation;
@@ -900,6 +1712,7 @@
       toast(t('wait'));
       return;
     }
+    setView('chat', { silent: true, skipFocus: true });
     state.current = null;
     dom.messages.replaceChildren();
     setEmptyVisible(true);
@@ -1472,7 +2285,12 @@
           payload = null;
         }
         const error = (payload && payload.error) || {};
-        throw new ApiError(error.message || t('request_failed'), response.status, error.code);
+        if (response.status === 401) redirectToLogin();
+        throw new ApiError(
+          response.status === 401 ? t('session_expired') : error.message || t('request_failed'),
+          response.status,
+          error.code,
+        );
       }
 
       await consumeSse(response, handleEvent);
@@ -1658,12 +2476,32 @@
     }
   }
 
-  async function bootstrapData() {
+  async function loadHealth() {
+    try {
+      const health = await api('/api/health');
+      state.health = health;
+      updateMetaPill(health.metadata);
+      updateDashboardStatus();
+      if (health.ai && health.ai.configured === false) {
+        toast(t('ai_not_configured'), true);
+      }
+      if (health.d365 && health.d365.configured === false) {
+        toast(t('d365_setup_required'), true);
+      }
+    } catch (error) {
+      toast(error.message, true);
+    }
+  }
+
+  async function bootstrapConversations() {
+    if (state.conversationsLoaded || state.conversationsLoading) return;
+    state.conversationsLoading = true;
     try {
       const data = await api('/api/conversations');
       state.conversations = Array.isArray(data && data.conversations) ? data.conversations : [];
+      state.conversationsLoaded = true;
       renderConversations();
-      if (!state.current) {
+      if (!state.current && state.view === 'chat') {
         setEmptyVisible(true);
         updateTitle();
       }
@@ -1676,6 +2514,8 @@
       }
     } catch (error) {
       toast(error.message, true);
+    } finally {
+      state.conversationsLoading = false;
     }
   }
 
@@ -1714,11 +2554,35 @@
     });
 
     dom.newChat.addEventListener('click', newChat);
-    dom.overviewNav.addEventListener('click', newChat);
-    dom.dashboardAsk.addEventListener('click', () => dom.input.focus());
+    dom.dashboardNav.addEventListener('click', () => setView('dashboard'));
+    // chatNav and dashboardGoChat are hidden: dashboard is the only primary view
+    if (dom.chatNav && !dom.chatNav.hidden) dom.chatNav.addEventListener('click', () => setView('chat'));
+    if (dom.dashboardGoChat && !dom.dashboardGoChat.hidden) dom.dashboardGoChat.addEventListener('click', () => setView('chat'));
+    dom.refreshDashboard.addEventListener('click', () => {
+      void loadDashboard({ force: true });
+    });
     dom.menuToggle.addEventListener('click', openSidebar);
     dom.sidebarClose.addEventListener('click', closeSidebar);
     dom.sidebarBackdrop.addEventListener('click', closeSidebar);
+
+    dom.moduleBrowserClose.addEventListener('click', closeModule);
+    dom.moduleSearch.addEventListener('submit', submitModuleSearch);
+    dom.moduleSearchClear.addEventListener('click', clearModuleSearch);
+    dom.modulePrev.addEventListener('click', () => {
+      if (state.records.loading || state.records.skip <= 0) return;
+      state.records.skip = Math.max(0, state.records.skip - state.records.top);
+      void loadModuleRecords();
+    });
+    dom.moduleNext.addEventListener('click', () => {
+      if (state.records.loading) return;
+      const data = state.records.data;
+      if (!data || !data.hasMore) return;
+      state.records.skip += state.records.top;
+      void loadModuleRecords();
+    });
+    dom.logoutBtn.addEventListener('click', () => {
+      void logout();
+    });
 
     dom.refreshConversations.addEventListener('click', () => {
       void refreshConversations(true);
@@ -1756,6 +2620,7 @@
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
         if (state.modal) closeModal(false);
+        else if (state.view === 'dashboard' && state.activeModule) closeModule();
         else closeSidebar();
       }
     });
@@ -1767,24 +2632,14 @@
     applyTheme();
     updateComposer();
     setEmptyVisible(true);
+    updateViewChrome();
 
     if (await redirectFromStaticPreview()) return;
+    if (!(await loadSession())) return;
 
-    try {
-      const health = await api('/api/health');
-      state.health = health;
-      updateMetaPill(health.metadata);
-      if (health.ai && health.ai.configured === false) {
-        toast(t('ai_not_configured'), true);
-      }
-      if (health.d365 && health.d365.configured === false) {
-        toast(t('d365_setup_required'), true);
-      }
-    } catch (error) {
-      toast(error.message, true);
-    }
-
-    await bootstrapData();
+    await loadHealth();
+    await loadDashboard();
+    void bootstrapConversations();
   }
 
   void init();
