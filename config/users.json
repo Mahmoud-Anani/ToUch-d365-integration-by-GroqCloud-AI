@@ -5,6 +5,12 @@
       "displayName": "Administrator",
       "role": "admin",
       "passwordHash": "scrypt$16384$8$1$64$yYCvqFxR7YLgk00SwcbSpQ$WhE6LqfhoLarm61U6ubSk-luq7i2yyz2B18VbH9ZP38GTWQWjxbnvpgk9YM-J7xJgyELB1BG7ErurKucXbY7KQ"
+    },
+    {
+      "username": "uitest",
+      "displayName": "UI Test (temporary)",
+      "role": "viewer",
+      "passwordHash": "scrypt$16384$8$1$64$fy_WhVnGRiO9uL723FF0jA$4koZ5gWqnvNBmau17_gVWFzVHyWK0WmsmgOxDh2cd6M9vu3vwSNUtV636VwlKf8xCgScu3WSFINaQ4W2TppwhQ"
     }
   ]
 }

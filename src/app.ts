@@ -422,6 +422,14 @@ export function createApp(services: AppServices): Express {
     }),
   );
 
+  app.get(
+    '/api/dashboard/analysis/:id/drilldown',
+    asyncHandler(async (req, res) => {
+      const key = typeof req.query.key === 'string' ? req.query.key : '';
+      res.json(await services.dashboard.drilldown(pathParam(req, 'id'), key));
+    }),
+  );
+
   app.get('/api/dashboard/modules', (_req, res) => {
     res.json({ modules: services.dashboard.listModules() });
   });

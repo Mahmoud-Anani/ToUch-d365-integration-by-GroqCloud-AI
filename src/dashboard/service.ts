@@ -1,4 +1,4 @@
-import type { AnalyticsEngine } from '../analytics/analytics';
+import type { AnalyticsEngine, AnalyticsResult, GroupResult } from '../analytics/analytics';
 import type { D365Client } from '../d365/client';
 import type { Logger } from '../logger';
 import type { MetadataService } from '../metadata/service';
@@ -35,12 +35,20 @@ export interface DashboardOverview {
 
 export type AnalysisChartType = 'bar' | 'donut' | 'column';
 
+/** Which dashboard section a breakdown is rendered into. */
+export type BreakdownSection = 'decision' | 'analysis';
+
 export interface AnalysisGroup {
   key: string;
   count: number;
-  /** Share of the breakdown total, 0–1. */
+  /** Share of the breakdown total, 0–1. Weighted by value when the breakdown aggregates one. */
   share: number;
   value?: number | string | null;
+}
+
+export interface AnalysisAggregate {
+  operation: 'sum' | 'average' | 'min' | 'max';
+  field: string;
 }
 
 export interface AnalysisBreakdown {
@@ -49,12 +57,37 @@ export interface AnalysisBreakdown {
   entitySet: string;
   groupByField: string;
   chart: AnalysisChartType;
+  section: BreakdownSection;
   status: 'ok' | 'unavailable';
   groups: AnalysisGroup[];
   groupCount: number;
   complete: boolean;
   recordsScanned: number;
   totalMatches?: number;
+  /** Value aggregate computed per group, when the definition has one. */
+  aggregate?: AnalysisAggregate;
+  /** When set, the client can drill into a group by this field. */
+  drillGroupByField?: string;
+  /** Present on drill-down responses: the group that was expanded. */
+  drillKey?: string;
+  parentGroupByField?: string;
+  error?: string;
+}
+
+/**
+ * Sales-vs-returns ratio used by the decision-support card. Both sides are
+ * counted independently and degrade independently.
+ */
+export interface SalesVsReturns {
+  status: 'ok' | 'partial' | 'unavailable';
+  salesEntitySet: string;
+  returnEntitySet: string;
+  salesCount: number | null;
+  returnCount: number | null;
+  /** Returns ÷ sales orders, 0–1; null when it cannot be computed. */
+  returnRate: number | null;
+  salesComplete: boolean;
+  returnsComplete: boolean;
   error?: string;
 }
 
@@ -62,6 +95,7 @@ export interface DashboardAnalysis {
   generatedAt: string;
   readOnly: true;
   breakdowns: AnalysisBreakdown[];
+  salesVsReturns: SalesVsReturns;
 }
 
 export interface ModuleRecords {
@@ -86,6 +120,13 @@ interface BreakdownDefinition {
   entityName: string;
   groupByField: string;
   chart: AnalysisChartType;
+  /** Dashboard section the card is rendered into. Defaults to 'analysis'. */
+  section?: BreakdownSection;
+  /** Optional value aggregate (e.g. total amount) shown per group. */
+  aggregateOperation?: AnalysisAggregate['operation'];
+  aggregateField?: string;
+  /** When set, clicking a group re-queries grouped by this field. */
+  drillGroupByField?: string;
 }
 
 /**
@@ -94,6 +135,45 @@ interface BreakdownDefinition {
  * independently when its entity is unavailable.
  */
 const BREAKDOWNS: readonly BreakdownDefinition[] = [
+  // Decision Support: Sales vs Returns
+  {
+    id: 'returns-by-reason',
+    title: { en: 'Returns by reason (order value)', ar: 'المرتجعات حسب السبب (قيمة الأمر)' },
+    entityName: 'ReturnOrderHeadersV2',
+    groupByField: 'CustomerReturnReasonCode',
+    chart: 'bar',
+    section: 'decision',
+    aggregateOperation: 'sum',
+    aggregateField: 'OrderTotalAmount',
+    drillGroupByField: 'CustomerAccountNumber',
+  },
+  {
+    id: 'returns-by-customer',
+    title: { en: 'Top customers by returns', ar: 'الأعلى في المرتجعات' },
+    entityName: 'ReturnOrderHeadersV2',
+    groupByField: 'CustomerAccountNumber',
+    chart: 'bar',
+    section: 'decision',
+    drillGroupByField: 'CustomerReturnReasonCode',
+  },
+  {
+    id: 'returns-by-status',
+    title: { en: 'Return orders by status', ar: 'أوامر المرتجع حسب الحالة' },
+    entityName: 'ReturnOrderHeadersV2',
+    groupByField: 'ReturnStatus',
+    chart: 'donut',
+    section: 'decision',
+    drillGroupByField: 'CustomerReturnReasonCode',
+  },
+  {
+    id: 'sales-orders-by-status',
+    title: { en: 'Sales orders by status', ar: 'أوامر البيع حسب الحالة' },
+    entityName: 'SalesOrderHeadersV4',
+    groupByField: 'SalesOrderStatus',
+    chart: 'column',
+    section: 'decision',
+    drillGroupByField: 'InvoiceCustomerAccountNumber',
+  },
   // Product & Inventory Analytics
   {
     id: 'products-by-type',
@@ -329,14 +409,34 @@ const BREAKDOWNS: readonly BreakdownDefinition[] = [
 ];
 
 const MAX_GROUP_ROWS = 12;
+const MAX_DRILL_KEY_LENGTH = 200;
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
 const MAX_SEARCH_LENGTH = 120;
 const MAX_SKIP = 100_000;
 const OVERVIEW_CACHE_MS = 15_000;
 
+/** Mirrors the analytics engine's blank-group label. */
+const BLANK_GROUP_KEY = '(blank)';
+
 function safeMessage(error: unknown): string {
   return toPublicError(error).body.error.message;
+}
+
+/**
+ * Builds a validated OData filter for a single group key. Group keys come
+ * from our own groupBy output, and the expression is re-parsed and rebuilt
+ * by the query builder before it ever reaches D365. Blank groups are matched
+ * against both null and empty string, since the analytics engine labels
+ * either as "(blank)".
+ */
+function buildGroupFilter(field: string, key: string): string {
+  const trimmed = key.trim();
+  if (trimmed === '' || trimmed === BLANK_GROUP_KEY) {
+    return `(${field} eq null or ${field} eq '')`;
+  }
+  const value = trimmed.length > MAX_DRILL_KEY_LENGTH ? trimmed.slice(0, MAX_DRILL_KEY_LENGTH) : trimmed;
+  return `${field} eq '${value.replace(/'/g, "''")}'`;
 }
 
 export interface DashboardServiceOptions {
@@ -410,7 +510,7 @@ export class DashboardService {
   }
 
   async analysis(): Promise<DashboardAnalysis> {
-    // Batch scans so 11 breakdowns never hit D365 all at once.
+    // Batch scans so 35 breakdowns never hit D365 all at once.
     const concurrency = 5;
     const breakdowns: AnalysisBreakdown[] = new Array(BREAKDOWNS.length);
     let cursor = 0;
@@ -427,48 +527,191 @@ export class DashboardService {
       generatedAt: new Date().toISOString(),
       readOnly: true,
       breakdowns,
+      // Runs after the worker pool so total concurrency stays bounded.
+      salesVsReturns: await this.salesVsReturns(),
     };
   }
 
-  private async runBreakdown(definition: BreakdownDefinition): Promise<AnalysisBreakdown> {
-    const base = {
+  /**
+   * Sales-vs-returns ratio for the decision-support card. Both counts are
+   * independent server-side counts and degrade independently.
+   */
+  private async salesVsReturns(): Promise<SalesVsReturns> {
+    const salesEntitySet = 'SalesOrderHeadersV4';
+    const returnEntitySet = 'ReturnOrderHeadersV2';
+    // Promise.resolve() guards against providers that throw synchronously.
+    const countSide = (entityName: string) =>
+      Promise.resolve().then(() => this.options.analytics.run({ operation: 'count', entityName }));
+    const sides = await Promise.allSettled([countSide(salesEntitySet), countSide(returnEntitySet)]);
+
+    const read = (
+      settled: PromiseSettledResult<{ value?: unknown; count?: number; complete: boolean }>,
+      side: 'sales' | 'returns',
+    ): { count: number | null; complete: boolean; error?: string } => {
+      if (settled.status === 'rejected') {
+        this.options.logger.warn('Sales-vs-returns count failed', {
+          side,
+          code: toPublicError(settled.reason).body.error.code,
+        });
+        return { count: null, complete: false, error: safeMessage(settled.reason) };
+      }
+      const value =
+        typeof settled.value.value === 'number'
+          ? settled.value.value
+          : typeof settled.value.count === 'number'
+            ? settled.value.count
+            : null;
+      return { count: value, complete: settled.value.complete === true };
+    };
+
+    const sales = read(sides[0], 'sales');
+    const returns = read(sides[1], 'returns');
+    const status: SalesVsReturns['status'] =
+      sales.count !== null && returns.count !== null
+        ? 'ok'
+        : sales.count !== null || returns.count !== null
+          ? 'partial'
+          : 'unavailable';
+    const returnRate =
+      sales.count !== null && returns.count !== null && sales.count > 0
+        ? Number((returns.count / sales.count).toFixed(4))
+        : null;
+    const error = sales.error ?? returns.error;
+
+    return {
+      status,
+      salesEntitySet,
+      returnEntitySet,
+      salesCount: sales.count,
+      returnCount: returns.count,
+      returnRate,
+      salesComplete: sales.complete,
+      returnsComplete: returns.complete,
+      ...(error && status !== 'ok' ? { error } : {}),
+    };
+  }
+
+  private breakdownBase(definition: BreakdownDefinition) {
+    return {
       id: definition.id,
       title: definition.title,
       entitySet: definition.entityName,
       groupByField: definition.groupByField,
       chart: definition.chart,
+      section: definition.section ?? 'analysis',
+      ...(definition.drillGroupByField ? { drillGroupByField: definition.drillGroupByField } : {}),
+      ...(definition.aggregateOperation && definition.aggregateField
+        ? { aggregate: { operation: definition.aggregateOperation, field: definition.aggregateField } }
+        : {}),
     };
+  }
+
+  /** Maps an analytics groupBy result onto a breakdown, weighting share by
+   * the value aggregate when the breakdown defines one. */
+  private summarize(
+    result: AnalyticsResult,
+    base: ReturnType<DashboardService['breakdownBase']>,
+  ): AnalysisBreakdown {
+    const allGroups = result.groups ?? [];
+    // Only weight by value when the aggregate actually carries a positive
+    // total; otherwise (e.g. all-zero amounts) fall back to counts.
+    const valueTotal = allGroups.reduce(
+      (sum, group) =>
+        sum + (typeof group.value === 'number' && Number.isFinite(group.value) ? group.value : 0),
+      0,
+    );
+    const preferValue = Boolean(base.aggregate) && valueTotal > 0;
+    const weight = (group: GroupResult) =>
+      preferValue ? Number(group.value) || 0 : Number(group.count) || 0;
+    const total = allGroups.reduce((sum, group) => sum + weight(group), 0);
+    const groups = allGroups
+      .slice()
+      .sort((left, right) => weight(right) - weight(left))
+      .slice(0, MAX_GROUP_ROWS)
+      .map((group) => ({
+        key: group.key,
+        count: group.count,
+        share: total > 0 ? Number((weight(group) / total).toFixed(4)) : 0,
+        ...(group.value !== undefined ? { value: group.value } : {}),
+      }));
+    return {
+      ...base,
+      status: 'ok',
+      groups,
+      groupCount: result.groupCount ?? result.groups?.length ?? groups.length,
+      complete: result.complete,
+      recordsScanned: result.recordsScanned,
+      ...(result.totalMatches !== undefined ? { totalMatches: result.totalMatches } : {}),
+    };
+  }
+
+  private async runBreakdown(definition: BreakdownDefinition): Promise<AnalysisBreakdown> {
+    const base = this.breakdownBase(definition);
     try {
       const result = await this.options.analytics.run({
         operation: 'groupBy',
         entityName: definition.entityName,
         groupByField: definition.groupByField,
-        aggregateOperation: 'count',
+        aggregateOperation: definition.aggregateOperation ?? 'count',
+        ...(definition.aggregateField ? { aggregateField: definition.aggregateField } : {}),
       });
-      const allGroups = result.groups ?? [];
-      const total = allGroups.reduce((sum, group) => sum + (Number(group.count) || 0), 0);
-      const groups = allGroups
-        .slice()
-        .sort((left, right) => right.count - left.count)
-        .slice(0, MAX_GROUP_ROWS)
-        .map((group) => ({
-          key: group.key,
-          count: group.count,
-          share: total > 0 ? Number((group.count / total).toFixed(4)) : 0,
-          ...(group.value !== undefined ? { value: group.value } : {}),
-        }));
-      return {
-        ...base,
-        status: 'ok',
-        groups,
-        groupCount: result.groupCount ?? result.groups?.length ?? groups.length,
-        complete: result.complete,
-        recordsScanned: result.recordsScanned,
-        ...(result.totalMatches !== undefined ? { totalMatches: result.totalMatches } : {}),
-      };
+      return this.summarize(result, base);
     } catch (error) {
       this.options.logger.warn('Dashboard analysis failed', {
         breakdown: definition.id,
+        entitySet: definition.entityName,
+        code: toPublicError(error).body.error.code,
+      });
+      return {
+        ...base,
+        status: 'unavailable',
+        groups: [],
+        groupCount: 0,
+        complete: false,
+        recordsScanned: 0,
+        error: safeMessage(error),
+      };
+    }
+  }
+
+  /**
+   * Re-queries a breakdown filtered to one group, grouped by the breakdown's
+   * drill field. This powers the click-to-drill interaction on chart cards.
+   */
+  async drilldown(id: string, key: string): Promise<AnalysisBreakdown> {
+    const definition = BREAKDOWNS.find((item) => item.id === id);
+    if (!definition) throw new NotFoundError('Dashboard breakdown was not found.');
+    if (!definition.drillGroupByField) {
+      throw new ValidationError('This breakdown does not support drill-down.');
+    }
+    const trimmed = typeof key === 'string' ? key.trim() : '';
+    if (!trimmed) throw new ValidationError('A drill-down group key is required.');
+    if (trimmed.length > MAX_DRILL_KEY_LENGTH) {
+      throw new ValidationError(
+        `Drill-down key must be at most ${MAX_DRILL_KEY_LENGTH} characters.`,
+      );
+    }
+
+    const base = {
+      ...this.breakdownBase(definition),
+      // Groups in a drill-down response are keyed by the drill field.
+      groupByField: definition.drillGroupByField,
+      drillKey: trimmed,
+      parentGroupByField: definition.groupByField,
+    };
+    try {
+      const result = await this.options.analytics.run({
+        operation: 'groupBy',
+        entityName: definition.entityName,
+        groupByField: definition.drillGroupByField,
+        aggregateOperation: definition.aggregateOperation ?? 'count',
+        ...(definition.aggregateField ? { aggregateField: definition.aggregateField } : {}),
+        filter: buildGroupFilter(definition.groupByField, trimmed),
+      });
+      return this.summarize(result, base);
+    } catch (error) {
+      this.options.logger.warn('Dashboard drill-down failed', {
+        breakdown: id,
         entitySet: definition.entityName,
         code: toPublicError(error).body.error.code,
       });

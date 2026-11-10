@@ -139,6 +139,25 @@
       chart_bar: 'Bars',
       chart_donut: 'Donut',
       chart_column: 'Columns',
+      chart_sort_top: 'Top',
+      chart_sort_name: 'A–Z',
+      chart_sort_value: 'Value',
+      chart_drill_hint: 'Select a bar to drill down',
+      chart_drill_back: 'Back',
+      chart_drill_loading: 'Loading details…',
+      chart_drill_of: '{key} · details',
+      chart_drill_by: 'Grouped by {field}',
+      analysis_selected: 'Selected {key} · {n} · {pct}%',
+      decision_ratio_title: 'Sales vs returns',
+      decision_ratio_caption: '{returns} return orders out of {sales} sales orders',
+      decision_sales_label: 'Sales',
+      decision_returns_label: 'Returns',
+      decision_view_sales: 'View sales orders',
+      decision_view_returns: 'View return orders',
+      decision_insight_high: 'Action: return rate is high — review the return reasons below.',
+      decision_insight_watch: 'Watch: return rate is elevated.',
+      decision_insight_low: 'Healthy: return rate is low.',
+      decision_insight_unknown: 'Return rate unavailable — sales or returns could not be counted.',
       kpi_empty: 'Module counts are not available yet.',
       kpi_unavailable: 'Unavailable',
       modules_title: 'System modules',
@@ -306,6 +325,25 @@
       chart_bar: 'القضبان',
       chart_donut: 'دائري',
       chart_column: 'الأعمدة',
+      chart_sort_top: 'الأعلى',
+      chart_sort_name: 'أبجدي',
+      chart_sort_value: 'القيمة',
+      chart_drill_hint: 'اختر قضباً لعرض التفاصيل',
+      chart_drill_back: 'رجوع',
+      chart_drill_loading: 'جارٍ تحميل التفاصيل…',
+      chart_drill_of: '{key} · التفاصيل',
+      chart_drill_by: 'مجمّع حسب {field}',
+      analysis_selected: 'المحدد {key} · {n} · {pct}%',
+      decision_ratio_title: 'المبيعات مقابل المرتجعات',
+      decision_ratio_caption: '{returns} أمر مرتجع من أصل {sales} أمر بيع',
+      decision_sales_label: 'المبيعات',
+      decision_returns_label: 'المرتجعات',
+      decision_view_sales: 'عرض أوامر البيع',
+      decision_view_returns: 'عرض أوامر المرتجع',
+      decision_insight_high: 'إجراء: معدل المرتجعات مرتفع — راجع أسباب المرتجعات أدناه.',
+      decision_insight_watch: 'متابعة: معدل المرتجعات مرتفع قليلاً.',
+      decision_insight_low: 'جيد: معدل المرتجعات منخفض.',
+      decision_insight_unknown: 'معدل المرتجعات غير متاح — تعذّر عدّ المبيعات أو المرتجعات.',
       kpi_empty: 'أعداد الوحدات غير متاحة بعد.',
       kpi_unavailable: 'غير متاح',
       modules_title: 'وحدات النظام',
@@ -437,6 +475,7 @@
     catalogStatus: $('catalog-status'),
     catalogStatusDot: $('catalog-status-dot'),
     kpiGrid: $('kpi-grid'),
+    decisionGrid: $('decision-grid'),
     analysisGrid: $('analysis-grid'),
     analysisStatus: $('analysis-status'),
     modulesStatus: $('modules-status'),
@@ -907,6 +946,7 @@
   function renderDashboard() {
     updateDashboardChrome();
     renderKpis();
+    renderDecision();
     renderAnalysis();
     renderModules();
     if (state.activeModule) renderModuleBrowser();
@@ -970,7 +1010,9 @@
       dom.analysisGrid.append(dashboardNote(message, Boolean(state.dashboard.error)));
       return;
     }
+    // Decision-section cards render into #decision-grid instead.
     for (const breakdown of analysis.breakdowns) {
+      if (breakdown.section === 'decision') continue;
       dom.analysisGrid.append(renderBreakdownCard(breakdown));
     }
   }
@@ -994,10 +1036,116 @@
     return Number.isInteger(pct) ? `${pct}%` : `${pct.toFixed(1)}%`;
   }
 
-  function buildBarChart(groups) {
+  // --- Interactive chart layer --------------------------------------------
+  // One shared floating tooltip used by every chart element.
+  const chartTooltip = document.createElement('div');
+  chartTooltip.className = 'chart-tooltip';
+  chartTooltip.setAttribute('role', 'tooltip');
+  chartTooltip.hidden = true;
+  document.body.append(chartTooltip);
+
+  function formatValue(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return String(value ?? '');
+    return new Intl.NumberFormat(state.lang === 'ar' ? 'ar' : 'en', {
+      maximumFractionDigits: 2,
+    }).format(number);
+  }
+
+  function tooltipHtml(groups, group) {
+    const valueTotal = groups.reduce(
+      (sum, item) =>
+        sum + (typeof item.value === 'number' && Number.isFinite(item.value) ? item.value : 0),
+      0,
+    );
+    const parts = [
+      `<strong>${escapeHtml(displayGroupKey(group.key))}</strong>`,
+      `${escapeHtml(formatCount(group.count))} · ${escapeHtml(formatShare(groupShare(groups, group)))}`,
+    ];
+    if (valueTotal > 0 && typeof group.value === 'number' && Number.isFinite(group.value)) {
+      parts.push(escapeHtml(formatValue(group.value)));
+    }
+    return parts.join('<br>');
+  }
+
+  function showChartTooltip(event, html) {
+    chartTooltip.innerHTML = html;
+    chartTooltip.hidden = false;
+    moveChartTooltip(event);
+  }
+
+  function moveChartTooltip(event) {
+    if (chartTooltip.hidden) return;
+    const pad = 14;
+    const rect = chartTooltip.getBoundingClientRect();
+    let left = event.clientX + pad;
+    let top = event.clientY + pad;
+    if (left + rect.width > window.innerWidth - 8) left = event.clientX - rect.width - pad;
+    if (top + rect.height > window.innerHeight - 8) top = event.clientY - rect.height - pad;
+    chartTooltip.style.left = `${Math.max(8, left)}px`;
+    chartTooltip.style.top = `${Math.max(8, top)}px`;
+  }
+
+  function hideChartTooltip() {
+    chartTooltip.hidden = true;
+  }
+
+  function sortGroups(groups, mode) {
+    const copy = groups.slice();
+    if (mode === 'name') {
+      copy.sort((a, b) => displayGroupKey(a.key).localeCompare(displayGroupKey(b.key)));
+    } else if (mode === 'value') {
+      copy.sort((a, b) => (Number(b.value) || 0) - (Number(a.value) || 0));
+    } else {
+      copy.sort((a, b) => (Number(b.count) || 0) - (Number(a.count) || 0));
+    }
+    return copy;
+  }
+
+  /**
+   * Wires hover tooltip, selection, drill-down and keyboard access onto one
+   * chart element. Click behaviour comes from opts.onSelect (drill or toggle).
+   */
+  function bindGroupElement(element, groups, group, opts) {
+    const options = opts || {};
+    element.classList.toggle('selected', options.selectedKey === group.key);
+    element.addEventListener('pointerenter', (event) => {
+      showChartTooltip(event, tooltipHtml(groups, group));
+      if (options.onHover) options.onHover(group, true);
+    });
+    element.addEventListener('pointermove', moveChartTooltip);
+    element.addEventListener('pointerleave', () => {
+      hideChartTooltip();
+      if (options.onHover) options.onHover(group, false);
+    });
+    element.addEventListener('blur', hideChartTooltip);
+    if (!options.onSelect) return;
+    element.addEventListener('click', () => options.onSelect(group));
+    element.tabIndex = 0;
+    element.setAttribute('role', 'button');
+    element.setAttribute('aria-label', `${displayGroupKey(group.key)}: ${formatCount(group.count)}`);
+    element.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        options.onSelect(group);
+      }
+    });
+  }
+
+  function buildBarChart(groups, opts) {
     const list = document.createElement('ul');
     list.className = 'bar-list';
-    const max = Math.max(...groups.map((group) => Number(group.count) || 0), 1);
+    // Scale bars by the value aggregate when it carries a positive total
+    // (e.g. returned order value per reason), otherwise by count.
+    const valueTotal = groups.reduce(
+      (sum, group) =>
+        sum + (typeof group.value === 'number' && Number.isFinite(group.value) ? group.value : 0),
+      0,
+    );
+    const useValue = valueTotal > 0;
+    const metric = (group) =>
+      useValue ? Number(group.value) || 0 : Number(group.count) || 0;
+    const max = Math.max(...groups.map(metric), 1);
     for (const group of groups) {
       const item = document.createElement('li');
       item.className = 'bar-row';
@@ -1011,20 +1159,23 @@
       track.className = 'bar-track';
       const fill = document.createElement('span');
       fill.className = 'bar-fill';
-      fill.style.width = `${Math.max(2, Math.round(((Number(group.count) || 0) / max) * 100))}%`;
+      fill.style.width = `${Math.max(2, Math.round((metric(group) / max) * 100))}%`;
       track.append(fill);
 
       const count = document.createElement('span');
       count.className = 'bar-count';
-      count.textContent = `${formatCount(group.count)} · ${formatShare(groupShare(groups, group))}`;
+      count.textContent = useValue
+        ? `${formatValue(group.value)} · ${formatShare(groupShare(groups, group))}`
+        : `${formatCount(group.count)} · ${formatShare(groupShare(groups, group))}`;
 
       item.append(label, track, count);
+      bindGroupElement(item, groups, group, opts);
       list.append(item);
     }
     return list;
   }
 
-  function buildDonutChart(groups) {
+  function buildDonutChart(groups, opts) {
     const wrap = document.createElement('div');
     wrap.className = 'donut-wrap';
 
@@ -1039,6 +1190,16 @@
       'aria-label',
       groups.map((group) => `${displayGroupKey(group.key)} ${formatShare(groupShare(groups, group))}`).join(', '),
     );
+
+    const segments = [];
+    const legendEntries = [];
+
+    // Hovering either the ring or the legend highlights both.
+    const highlight = (key, on) => {
+      for (const entry of [...segments, ...legendEntries]) {
+        entry.element.classList.toggle('hot', Boolean(on) && entry.key === key);
+      }
+    };
 
     let start = 0;
     groups.forEach((group, index) => {
@@ -1056,6 +1217,11 @@
       circle.setAttribute('transform', `rotate(-90 ${size / 2} ${size / 2})`);
       circle.setAttribute('class', `donut-seg seg-${index % CHART_COLORS.length}`);
       svg.append(circle);
+      segments.push({ key: group.key, element: circle });
+      bindGroupElement(circle, groups, group, {
+        ...(opts || {}),
+        onHover: (hovered, on) => highlight(hovered.key, on),
+      });
       start += length;
     });
 
@@ -1088,12 +1254,17 @@
       pct.textContent = formatShare(groupShare(groups, group));
       row.append(dot, key, count, pct);
       legend.append(row);
+      legendEntries.push({ key: group.key, element: row });
+      bindGroupElement(row, groups, group, {
+        ...(opts || {}),
+        onHover: (hovered, on) => highlight(hovered.key, on),
+      });
     });
     wrap.append(legend);
     return wrap;
   }
 
-  function buildColumnChart(groups) {
+  function buildColumnChart(groups, opts) {
     const chart = document.createElement('div');
     chart.className = 'col-chart';
     chart.setAttribute('role', 'img');
@@ -1101,7 +1272,14 @@
       'aria-label',
       groups.map((group) => `${displayGroupKey(group.key)} ${formatCount(group.count)}`).join(', '),
     );
-    const max = Math.max(...groups.map((group) => Number(group.count) || 0), 1);
+    const valueTotal = groups.reduce(
+      (sum, group) =>
+        sum + (typeof group.value === 'number' && Number.isFinite(group.value) ? group.value : 0),
+      0,
+    );
+    const useValue = valueTotal > 0;
+    const metric = (group) => (useValue ? Number(group.value) || 0 : Number(group.count) || 0);
+    const max = Math.max(...groups.map(metric), 1);
     groups.forEach((group, index) => {
       const column = document.createElement('div');
       column.className = 'col';
@@ -1109,13 +1287,15 @@
 
       const value = document.createElement('span');
       value.className = 'col-value';
-      value.textContent = formatCount(group.count);
+      value.textContent = useValue
+        ? formatValue(group.value)
+        : formatCount(group.count);
 
       const lane = document.createElement('span');
       lane.className = 'col-lane';
       const fill = document.createElement('span');
       fill.className = `col-fill seg-bg-${index % CHART_COLORS.length}`;
-      fill.style.height = `${Math.max(4, Math.round(((Number(group.count) || 0) / max) * 100))}%`;
+      fill.style.height = `${Math.max(4, Math.round((metric(group) / max) * 100))}%`;
       lane.append(fill);
 
       const key = document.createElement('span');
@@ -1124,6 +1304,7 @@
       key.title = displayGroupKey(group.key);
 
       column.append(value, lane, key);
+      bindGroupElement(column, groups, group, opts);
       chart.append(column);
     });
     return chart;
@@ -1131,7 +1312,10 @@
 
   function renderBreakdownCard(breakdown) {
     const card = document.createElement('article');
-    card.className = 'analysis-card';
+    card.className = `analysis-card${breakdown.section === 'decision' ? ' decision-card' : ''}`;
+
+    // Per-card interaction state: sort mode, selected group, drill-down.
+    const view = { sort: 'count', selectedKey: null, drill: null };
 
     const head = document.createElement('header');
     head.className = 'analysis-head';
@@ -1147,28 +1331,107 @@
     entity.textContent = breakdown.entitySet;
     tags.append(chartTag, entity);
     head.append(title, tags);
-    card.append(head);
 
-    if (breakdown.status !== 'ok') {
-      card.append(dashboardNote(breakdown.error || t('analysis_unavailable'), true));
-      return card;
-    }
-
-    const groups = Array.isArray(breakdown.groups) ? breakdown.groups : [];
-    if (groups.length === 0) {
-      card.append(dashboardNote(t('module_no_records'), false));
-    } else if (breakdown.chart === 'donut') {
-      card.append(buildDonutChart(groups));
-    } else if (breakdown.chart === 'column') {
-      card.append(buildColumnChart(groups));
-    } else {
-      card.append(buildBarChart(groups));
-    }
-
+    const controls = document.createElement('div');
+    const body = document.createElement('div');
+    body.className = 'analysis-body';
     const foot = document.createElement('footer');
     foot.className = 'analysis-foot';
+    card.append(head, controls, body, foot);
+
+    const refresh = () => {
+      renderChartControls(controls, breakdown, view, refresh);
+      renderCardBody(body, breakdown, view, refresh);
+      renderCardFoot(foot, breakdown, view);
+    };
+    refresh();
+    return card;
+  }
+
+  function renderChartControls(container, breakdown, view, refresh) {
+    container.replaceChildren();
+    container.className = 'chart-controls';
+    if (breakdown.status !== 'ok') return;
+    const groups = Array.isArray(breakdown.groups) ? breakdown.groups : [];
+    if (groups.length === 0) return;
+
+    const valueTotal = groups.reduce(
+      (sum, group) =>
+        sum + (typeof group.value === 'number' && Number.isFinite(group.value) ? group.value : 0),
+      0,
+    );
+    const hasValue = valueTotal > 0;
+    const options = [
+      { id: 'count', label: t('chart_sort_top') },
+      ...(hasValue ? [{ id: 'value', label: t('chart_sort_value') }] : []),
+      { id: 'name', label: t('chart_sort_name') },
+    ];
+    const cluster = document.createElement('div');
+    cluster.className = 'chart-sort';
+    for (const option of options) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `chart-btn${view.sort === option.id ? ' active' : ''}`;
+      button.textContent = option.label;
+      button.setAttribute('aria-pressed', String(view.sort === option.id));
+      button.addEventListener('click', () => {
+        view.sort = option.id;
+        refresh();
+      });
+      cluster.append(button);
+    }
+    container.append(cluster);
+
+    if (breakdown.drillGroupByField) {
+      const hint = document.createElement('span');
+      hint.className = 'chart-hint';
+      hint.textContent = t('chart_drill_hint');
+      container.append(hint);
+    }
+  }
+
+  function renderCardBody(body, breakdown, view, refresh) {
+    body.replaceChildren();
+    if (breakdown.status !== 'ok') {
+      body.append(dashboardNote(breakdown.error || t('analysis_unavailable'), true));
+      return;
+    }
+    const groups = Array.isArray(breakdown.groups) ? breakdown.groups : [];
+    if (groups.length === 0) {
+      body.append(dashboardNote(t('module_no_records'), false));
+      return;
+    }
+    if (view.drill) {
+      body.append(buildDrillPanel(breakdown, view, refresh));
+      return;
+    }
+
+    const sorted = sortGroups(groups, view.sort);
+    const opts = {
+      selectedKey: view.selectedKey,
+      onSelect: (group) => {
+        if (breakdown.drillGroupByField) {
+          void loadDrill(breakdown, group, view, refresh);
+        } else {
+          view.selectedKey = view.selectedKey === group.key ? null : group.key;
+          refresh();
+        }
+      },
+    };
+    if (breakdown.chart === 'donut') body.append(buildDonutChart(sorted, opts));
+    else if (breakdown.chart === 'column') body.append(buildColumnChart(sorted, opts));
+    else body.append(buildBarChart(sorted, opts));
+  }
+
+  function renderCardFoot(foot, breakdown, view) {
+    foot.replaceChildren();
+    if (breakdown.status !== 'ok') return;
+    const groups = Array.isArray(breakdown.groups) ? breakdown.groups : [];
+
     if (groups.length > 0) {
-      const top = groups[0];
+      const top = groups.reduce((best, group) =>
+        (Number(group.count) || 0) > (Number(best.count) || 0) ? group : best,
+      );
       const topShare = document.createElement('span');
       topShare.textContent = t('analysis_top_share', {
         key: displayGroupKey(top.key),
@@ -1176,6 +1439,7 @@
       });
       foot.append(topShare);
     }
+
     const groupCount = document.createElement('span');
     groupCount.textContent = t('analysis_groups', {
       n: formatCount(breakdown.groupCount ?? groups.length),
@@ -1194,7 +1458,227 @@
       badge.textContent = t('analysis_partial');
       foot.append(badge);
     }
-    card.append(foot);
+    if (view.selectedKey) {
+      const selected = groups.find((group) => group.key === view.selectedKey);
+      if (selected) {
+        const badge = document.createElement('span');
+        badge.className = 'badge selected';
+        badge.textContent = t('analysis_selected', {
+          key: displayGroupKey(selected.key),
+          n: formatCount(selected.count),
+          pct: formatShare(groupShare(groups, selected)).replace('%', ''),
+        });
+        foot.append(badge);
+      }
+    }
+  }
+
+  async function loadDrill(breakdown, group, view, refresh) {
+    view.drill = { key: group.key, loading: true, error: null, data: null };
+    refresh();
+    try {
+      const data = await api(
+        `/api/dashboard/analysis/${encodeURIComponent(breakdown.id)}/drilldown?key=${encodeURIComponent(group.key)}`,
+      );
+      view.drill = { key: group.key, loading: false, error: null, data };
+    } catch (error) {
+      view.drill = {
+        key: group.key,
+        loading: false,
+        error: (error && error.message) || t('request_failed'),
+        data: null,
+      };
+    }
+    refresh();
+  }
+
+  function buildDrillPanel(breakdown, view, refresh) {
+    const panel = document.createElement('div');
+    panel.className = 'drill-panel';
+
+    const head = document.createElement('div');
+    head.className = 'drill-head';
+    const back = document.createElement('button');
+    back.type = 'button';
+    back.className = 'chip-btn drill-back';
+    back.textContent = `← ${t('chart_drill_back')}`;
+    back.addEventListener('click', () => {
+      view.drill = null;
+      refresh();
+    });
+    const label = document.createElement('span');
+    label.className = 'drill-label';
+    label.textContent = t('chart_drill_of', { key: displayGroupKey(view.drill.key) });
+    head.append(back, label);
+    panel.append(head);
+
+    const drill = view.drill;
+    if (drill.loading) {
+      panel.append(dashboardNote(t('chart_drill_loading'), false));
+      return panel;
+    }
+    if (drill.error) {
+      panel.append(dashboardNote(drill.error, true));
+      return panel;
+    }
+    const data = drill.data;
+    const groups = data && Array.isArray(data.groups) ? data.groups : [];
+    if (groups.length === 0) {
+      panel.append(dashboardNote(t('module_no_records'), false));
+      return panel;
+    }
+    const sub = document.createElement('p');
+    sub.className = 'drill-sub';
+    sub.textContent = t('chart_drill_by', { field: data.groupByField || '' });
+    panel.append(sub);
+    panel.append(buildBarChart(sortGroups(groups, 'count'), {}));
+    return panel;
+  }
+
+  // --- Decision support: sales vs returns ----------------------------------
+
+  function renderDecision() {
+    dom.decisionGrid.replaceChildren();
+    const analysis = state.dashboard.analysis;
+    if (!analysis) return;
+    if (analysis.salesVsReturns) {
+      dom.decisionGrid.append(renderRatioCard(analysis.salesVsReturns));
+    }
+    const breakdowns = Array.isArray(analysis.breakdowns) ? analysis.breakdowns : [];
+    for (const breakdown of breakdowns) {
+      if (breakdown.section === 'decision') {
+        dom.decisionGrid.append(renderBreakdownCard(breakdown));
+      }
+    }
+  }
+
+  function renderRatioCard(metric) {
+    const card = document.createElement('article');
+    card.className = 'analysis-card ratio-card';
+
+    const head = document.createElement('header');
+    head.className = 'analysis-head';
+    const title = document.createElement('h3');
+    title.textContent = t('decision_ratio_title');
+    const tags = document.createElement('span');
+    tags.className = 'analysis-tags';
+    const salesTag = document.createElement('span');
+    salesTag.className = 'entity-tag';
+    salesTag.textContent = metric.salesEntitySet;
+    const returnTag = document.createElement('span');
+    returnTag.className = 'entity-tag';
+    returnTag.textContent = metric.returnEntitySet;
+    tags.append(salesTag, returnTag);
+    const partial = !metric.salesComplete || !metric.returnsComplete;
+    if (partial && metric.status !== 'unavailable') {
+      const badge = document.createElement('span');
+      badge.className = 'badge partial';
+      badge.textContent = t('analysis_partial');
+      tags.append(badge);
+    }
+    head.append(title, tags);
+
+    if (metric.status === 'unavailable') {
+      card.append(head);
+      card.append(dashboardNote(metric.error || t('decision_insight_unknown'), true));
+      return card;
+    }
+
+    const rate =
+      typeof metric.returnRate === 'number' && Number.isFinite(metric.returnRate)
+        ? metric.returnRate
+        : null;
+    const salesCount =
+      typeof metric.salesCount === 'number' && Number.isFinite(metric.salesCount)
+        ? metric.salesCount
+        : null;
+    const returnCount =
+      typeof metric.returnCount === 'number' && Number.isFinite(metric.returnCount)
+        ? metric.returnCount
+        : null;
+
+    const body = document.createElement('div');
+    body.className = 'ratio-body';
+
+    const value = document.createElement('div');
+    value.className = 'ratio-value';
+    value.textContent = rate === null ? '—' : `${(rate * 100).toFixed(1)}%`;
+
+    const caption = document.createElement('p');
+    caption.className = 'ratio-caption';
+    caption.textContent = t('decision_ratio_caption', {
+      returns: formatCount(returnCount),
+      sales: formatCount(salesCount),
+    });
+
+    // Proportional bar: returns segment width = return rate.
+    const bar = document.createElement('div');
+    bar.className = 'ratio-bar';
+    bar.setAttribute('role', 'img');
+    const returnPct = rate === null ? 0 : Math.min(99.5, Math.max(0.5, rate * 100));
+    const salesSeg = document.createElement('span');
+    salesSeg.className = 'ratio-seg sales';
+    salesSeg.style.width = `${(100 - returnPct).toFixed(2)}%`;
+    salesSeg.textContent = formatCount(salesCount);
+    const returnsSeg = document.createElement('span');
+    returnsSeg.className = 'ratio-seg returns';
+    returnsSeg.style.width = `${returnPct.toFixed(2)}%`;
+    returnsSeg.textContent = returnPct >= 8 ? formatCount(returnCount) : '';
+    bar.append(salesSeg, returnsSeg);
+    bar.setAttribute(
+      'aria-label',
+      `${t('decision_sales_label')}: ${formatCount(salesCount)}, ${t('decision_returns_label')}: ${formatCount(returnCount)}`,
+    );
+
+    const legend = document.createElement('div');
+    legend.className = 'ratio-legend';
+    const legendItem = (label, count, className) => {
+      const item = document.createElement('span');
+      item.className = 'ratio-legend-item';
+      const dot = document.createElement('span');
+      dot.className = `ratio-dot ${className}`;
+      const text = document.createElement('span');
+      text.textContent = `${label}: ${formatCount(count)}`;
+      item.append(dot, text);
+      return item;
+    };
+    legend.append(
+      legendItem(t('decision_sales_label'), salesCount, 'sales'),
+      legendItem(t('decision_returns_label'), returnCount, 'returns'),
+    );
+
+    const actions = document.createElement('div');
+    actions.className = 'ratio-actions';
+    const salesBtn = document.createElement('button');
+    salesBtn.type = 'button';
+    salesBtn.className = 'chip-btn';
+    salesBtn.textContent = t('decision_view_sales');
+    salesBtn.addEventListener('click', () => openModule('sales-orders'));
+    const returnsBtn = document.createElement('button');
+    returnsBtn.type = 'button';
+    returnsBtn.className = 'chip-btn';
+    returnsBtn.textContent = t('decision_view_returns');
+    returnsBtn.addEventListener('click', () => openModule('return-orders'));
+    actions.append(salesBtn, returnsBtn);
+
+    const insight = document.createElement('p');
+    insight.className = 'ratio-insight';
+    if (rate === null) {
+      insight.textContent = t('decision_insight_unknown');
+      insight.classList.add('unknown');
+    } else if (rate > 0.05) {
+      insight.textContent = t('decision_insight_high');
+      insight.classList.add('high');
+    } else if (rate > 0.02) {
+      insight.textContent = t('decision_insight_watch');
+      insight.classList.add('watch');
+    } else {
+      insight.textContent = t('decision_insight_low');
+      insight.classList.add('low');
+    }
+
+    body.append(value, caption, bar, legend, actions, insight);
+    card.append(head, body);
     return card;
   }
 

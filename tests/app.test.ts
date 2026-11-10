@@ -202,4 +202,56 @@ describe('HTTP API with mandatory login', () => {
 
     await agent.get('/api/dashboard/modules/not-a-module/records').expect(404);
   });
+
+  it('serves chart drill-downs and rejects non-drillable breakdowns', async () => {
+    const services = createTestServices();
+    const app = createApp(services);
+    const agent = await signIn(app, 'test');
+
+    // Unknown breakdown → 404; breakdown without a drill field or key → 400.
+    await agent
+      .get('/api/dashboard/analysis/not-a-breakdown/drilldown')
+      .query({ key: 'x' })
+      .expect(404);
+    await agent
+      .get('/api/dashboard/analysis/customers-by-group/drilldown')
+      .query({ key: 'x' })
+      .expect(400);
+    await agent.get('/api/dashboard/analysis/returns-by-reason/drilldown').expect(400);
+
+    const run = vi.spyOn(services.analytics, 'run').mockResolvedValue({
+      operation: 'groupBy',
+      entitySet: 'ReturnOrderHeadersV2',
+      entityType: 'ReturnOrderHeadersV2',
+      recordsScanned: 4,
+      recordsUsed: 4,
+      nullOrMissing: 0,
+      complete: true,
+      method: 'scan',
+      groups: [{ key: 'C-0001', count: 4 }],
+      groupCount: 1,
+      notes: [],
+    } as never);
+
+    const drill = await agent
+      .get('/api/dashboard/analysis/returns-by-reason/drilldown')
+      .query({ key: 'QUALITY' })
+      .expect(200);
+
+    expect(run).toHaveBeenCalledWith(
+      expect.objectContaining({
+        operation: 'groupBy',
+        entityName: 'ReturnOrderHeadersV2',
+        groupByField: 'CustomerAccountNumber',
+        filter: "CustomerReturnReasonCode eq 'QUALITY'",
+      }),
+    );
+    expect(drill.body).toMatchObject({
+      status: 'ok',
+      drillKey: 'QUALITY',
+      parentGroupByField: 'CustomerReturnReasonCode',
+      groupByField: 'CustomerAccountNumber',
+    });
+    expect(drill.body.groups[0]).toMatchObject({ key: 'C-0001', count: 4 });
+  });
 });
