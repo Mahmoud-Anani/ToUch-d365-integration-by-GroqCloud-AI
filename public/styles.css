@@ -3073,13 +3073,19 @@ circle.donut-seg.seg-6 {
 }
 
 .module-browser {
-  margin-top: 14px;
+  width: min(100%, 1440px);
+  margin: 0 auto;
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 17px;
   background: var(--surface);
   box-shadow: var(--shadow-soft);
   scroll-margin-top: 12px;
+}
+
+.module-view {
+  overflow-y: auto;
+  padding: clamp(18px, 3vw, 34px) clamp(16px, 4vw, 48px) 48px;
 }
 
 .module-browser-head {

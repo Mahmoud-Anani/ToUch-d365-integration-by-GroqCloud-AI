@@ -464,6 +464,7 @@
     langToggle: $('lang-toggle'),
     themeToggle: $('theme-toggle'),
     dashboardView: $('dashboard-view'),
+    moduleView: $('module-view'),
     dashboardScroll: $('dashboard-scroll'),
     dashboardUpdated: $('dashboard-updated'),
     refreshDashboard: $('refresh-dashboard'),
@@ -758,10 +759,18 @@
   }
 
   function updateViewChrome() {
-    document.title = `${t('brand')} · ${t(state.view === 'dashboard' ? 'view_dashboard_title' : 'view_chat_title')}`;
+    const moduleTitle = state.view === 'module'
+      ? localizedText(moduleDefinition(state.activeModule)?.title) || state.activeModule || t('modules_title')
+      : '';
+    document.title = `${t('brand')} · ${state.view === 'dashboard' ? t('view_dashboard_title') : state.view === 'module' ? moduleTitle : t('view_chat_title')}`;
     if (state.view === 'dashboard') {
       dom.viewTitle.textContent = t('view_dashboard_title');
       dom.viewSubtitle.textContent = t('view_dashboard_subtitle');
+      return;
+    }
+    if (state.view === 'module') {
+      dom.viewTitle.textContent = moduleTitle;
+      dom.viewSubtitle.textContent = localizedText(moduleDefinition(state.activeModule)?.description) || '';
       return;
     }
     dom.viewTitle.textContent = state.current ? state.current.title : t('view_chat_title');
@@ -847,10 +856,17 @@
   // --- View switching ------------------------------------------------------
 
   function setView(view, options) {
-    const next = view === 'chat' ? 'chat' : 'dashboard';
+    const next = ['chat', 'module'].includes(view) ? view : 'dashboard';
     const settings = options || {};
+    if (next !== 'module' && state.activeModule) {
+      state.activeModule = null;
+      state.records = { loading: false, error: null, search: '', top: 25, skip: 0, data: null };
+      dom.moduleBrowser.hidden = true;
+      if (window.location.pathname.startsWith('/modules/')) window.history.replaceState({}, '', '/');
+    }
     state.view = next;
     dom.dashboardView.hidden = next !== 'dashboard';
+    dom.moduleView.hidden = next !== 'module';
     dom.chatView.hidden = next !== 'chat';
     dom.conversationSection.hidden = next !== 'chat';
     dom.dashboardNav.classList.toggle('active', next === 'dashboard');
@@ -863,7 +879,7 @@
     if (!settings.silent) closeSidebar();
     if (next === 'dashboard') {
       if (!settings.skipLoad) void ensureDashboard();
-    } else {
+    } else if (next === 'chat') {
       if (!state.conversationsLoaded) void bootstrapConversations();
       if (!settings.skipFocus) {
         window.requestAnimationFrame(() => dom.input.focus());
@@ -1809,20 +1825,16 @@
     if (!summary && !definition) return;
     state.activeModule = id;
     state.records = { loading: true, error: null, search: '', top: 25, skip: 0, data: null };
-    setView('dashboard', { silent: true });
+    const modulePath = `/modules/${encodeURIComponent(id)}`;
+    if (window.location.pathname !== modulePath) window.history.pushState({ module: id }, '', modulePath);
+    setView('module', { silent: true });
     dom.moduleBrowser.hidden = false;
     renderDashboard();
     void loadModuleRecords();
-    window.requestAnimationFrame(() => {
-      try {
-        dom.moduleBrowser.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      } catch {
-        // Older browsers can ignore smooth scrolling.
-      }
-    });
   }
 
   function closeModule() {
+    if (window.location.pathname.startsWith('/modules/')) window.history.replaceState({}, '', '/');
     state.activeModule = null;
     state.records = { loading: false, error: null, search: '', top: 25, skip: 0, data: null };
     dom.moduleBrowser.hidden = true;
@@ -1832,6 +1844,7 @@
     dom.moduleBrowserCount.textContent = '';
     dom.moduleTableWrap.replaceChildren();
     dom.modulePageInfo.textContent = '';
+    setView('dashboard', { silent: true });
     renderModules();
   }
 
@@ -3175,6 +3188,14 @@
   }
 
   function bindEvents() {
+    window.addEventListener('popstate', () => {
+      const match = window.location.pathname.match(/^\/modules\/([^/]+)\/?$/);
+      if (match) {
+        try { openModule(decodeURIComponent(match[1])); } catch { setView('dashboard', { silent: true }); }
+      } else if (state.activeModule) {
+        closeModule();
+      }
+    });
     dom.composer.addEventListener('submit', (event) => {
       event.preventDefault();
       if (state.sending) return;
@@ -3260,7 +3281,7 @@
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
         if (state.modal) closeModal(false);
-        else if (state.view === 'dashboard' && state.activeModule) closeModule();
+        else if (state.view === 'module' && state.activeModule) closeModule();
         else closeSidebar();
       }
     });
@@ -3279,6 +3300,10 @@
 
     await loadHealth();
     await loadDashboard();
+    const moduleRoute = window.location.pathname.match(/^\/modules\/([^/]+)\/?$/);
+    if (moduleRoute) {
+      try { openModule(decodeURIComponent(moduleRoute[1])); } catch { setView('dashboard', { silent: true }); }
+    }
     void bootstrapConversations();
   }
 
