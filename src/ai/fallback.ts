@@ -269,6 +269,7 @@ export class AIService implements AIProvider {
     let firstRateLimit: AIProviderError | undefined;
     let lastError: AIProviderError | undefined;
     let availableAttempt = false;
+    const providerFailures: string[] = [];
 
     for (const provider of attempted) {
       if (requestOptions?.signal?.aborted) {
@@ -306,6 +307,7 @@ export class AIService implements AIProvider {
         state.failedRequests += 1;
         state.consecutiveFailures += 1;
         lastError = error;
+        providerFailures.push(`${provider.name}: ${error.code}`);
         this.coolDown(provider, state, error);
         if (error.code === 'AI_RATE_LIMITED') {
           state.rateLimitErrors += 1;
@@ -371,6 +373,7 @@ export class AIService implements AIProvider {
         publicMessage: this.exhaustedMessage(
           'At least one model usage quota is exhausted.',
           toolIneligibleCount,
+          providerFailures,
         ),
         retryAfterSeconds: firstQuota.retryAfterSeconds,
         cause: firstQuota,
@@ -382,6 +385,7 @@ export class AIService implements AIProvider {
         publicMessage: this.exhaustedMessage(
           'At least one model is rate limited.',
           toolIneligibleCount,
+          providerFailures,
         ),
         retryAfterSeconds: firstRateLimit.retryAfterSeconds,
         cause: firstRateLimit,
@@ -396,6 +400,7 @@ export class AIService implements AIProvider {
         publicMessage: this.exhaustedMessage(
           'Check provider credentials and availability, then try again.',
           toolIneligibleCount,
+          providerFailures,
         ),
         cause: lastError,
       });
@@ -406,11 +411,18 @@ export class AIService implements AIProvider {
     });
   }
 
-  private exhaustedMessage(reason: string, toolIneligibleCount: number): string {
+  private exhaustedMessage(
+    reason: string,
+    toolIneligibleCount: number,
+    providerFailures: string[] = [],
+  ): string {
     const skipped = toolIneligibleCount > 0
       ? ` ${toolIneligibleCount} configured model(s) were skipped because tool calling is not enabled.`
       : '';
-    return `All eligible AI models failed. ${reason}${skipped} Please check provider health and configuration.`;
+    const failures = providerFailures.length > 0
+      ? ` Provider results: ${providerFailures.join('; ')}.`
+      : '';
+    return `All eligible AI models failed. ${reason}${failures}${skipped} Please check provider health and configuration.`;
   }
 
   private coolDown(provider: AIProvider, state: ProviderStats, error: AIProviderError): void {

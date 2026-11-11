@@ -410,9 +410,6 @@ svg {
   z-index: 20;
 }
 
-.menu-toggle {
-  display: none;
-}
 
 .title-block {
   flex: 1;
@@ -1466,6 +1463,12 @@ html[dir="rtl"] .message.user .message-body {
 }
 
 /* Responsive */
+/* when screen width > 900px then change .menu-toggle and .sidebar-close to displey: grid */
+.menu-toggle,
+.sidebar-close {
+  display: none;
+}
+
 @media (max-width: 900px) {
   .sidebar {
     position: fixed;
@@ -2434,7 +2437,7 @@ html[data-theme="dark"] .dashboard-cta {
   text-wrap: balance;
 }
 
-.dashboard-intro-copy > p {
+.dashboard-intro-copy>p {
   max-width: 64ch;
   margin: 12px 0 0;
   color: var(--muted);
@@ -2728,69 +2731,90 @@ html[dir="rtl"] .bar-fill {
 .seg-0 {
   color: #ff5659;
 }
+
 .seg-1 {
   color: #a8c26e;
 }
+
 .seg-2 {
   color: #2a9d8f;
 }
+
 .seg-3 {
   color: #e9c46a;
 }
+
 .seg-4 {
   color: #5b8e7d;
 }
+
 .seg-5 {
   color: #4ea8de;
 }
+
 .seg-6 {
   color: #9d7ea8;
 }
+
 .seg-dot {
   width: 9px;
   height: 9px;
   border-radius: 3px;
   background: currentColor;
 }
+
 circle.donut-seg.seg-0 {
   stroke: #ff5659;
 }
+
 circle.donut-seg.seg-1 {
   stroke: #a8c26e;
 }
+
 circle.donut-seg.seg-2 {
   stroke: #2a9d8f;
 }
+
 circle.donut-seg.seg-3 {
   stroke: #e9c46a;
 }
+
 circle.donut-seg.seg-4 {
   stroke: #5b8e7d;
 }
+
 circle.donut-seg.seg-5 {
   stroke: #4ea8de;
 }
+
 circle.donut-seg.seg-6 {
   stroke: #9d7ea8;
 }
+
 .seg-bg-0 {
   background: #ff5659;
 }
+
 .seg-bg-1 {
   background: #a8c26e;
 }
+
 .seg-bg-2 {
   background: #2a9d8f;
 }
+
 .seg-bg-3 {
   background: #e9c46a;
 }
+
 .seg-bg-4 {
   background: #5b8e7d;
 }
+
 .seg-bg-5 {
   background: #4ea8de;
 }
+
 .seg-bg-6 {
   background: #9d7ea8;
 }
@@ -3097,7 +3121,7 @@ circle.donut-seg.seg-6 {
   background: linear-gradient(120deg, var(--surface), var(--surface-2));
 }
 
-.module-browser-head > .icon-btn {
+.module-browser-head>.icon-btn {
   width: 34px;
   height: 34px;
   flex: 0 0 34px;
@@ -3307,7 +3331,7 @@ html[data-theme="dark"] .module-browser-head {
     font-size: 27px;
   }
 
-  .dashboard-intro-copy > p {
+  .dashboard-intro-copy>p {
     font-size: 12px;
   }
 
