@@ -1,0 +1,195 @@
+{
+  "info": {
+    "_postman_id": "f6d7cbae-d7da-4e6f-a6a4-6d0b42bc5813",
+    "name": "Services",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "23028124",
+    "_collection_link": "https://go.postman.co/collection/22139284-f6d7cbae-d7da-4e6f-a6a4-6d0b42bc5813?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Metadata",
+      "item": [
+        {
+          "name": "Metadata",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{resource}}/metadata",
+              "host": [
+                "{{resource}}"
+              ],
+              "path": [
+                "metadata"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Labels",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{resource}}/metadata/Labels(Id='@SYS12345',Language='en-us')",
+              "host": [
+                "{{resource}}"
+              ],
+              "path": [
+                "metadata",
+                "Labels(Id='@SYS12345',Language='en-us')"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DataEntities",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{resource}}/Metadata/DataEntities",
+              "host": [
+                "{{resource}}"
+              ],
+              "path": [
+                "Metadata",
+                "DataEntities"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PublicEntities",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{resource}}/Metadata/PublicEntities",
+              "host": [
+                "{{resource}}"
+              ],
+              "path": [
+                "Metadata",
+                "PublicEntities"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PublicEnumerations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{resource}}/Metadata/PublicEnumerations",
+              "host": [
+                "{{resource}}"
+              ],
+              "path": [
+                "Metadata",
+                "PublicEnumerations"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Services",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{bearerToken}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{resource}}/api/services",
+          "host": [
+            "{{resource}}"
+          ],
+          "path": [
+            "api",
+            "services"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "ValidateLedgerAccount_draft",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{bearerToken}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"_ledgerAccountValidationContract\": {\r\n            //??\r\n        }\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{resource}}/api/services/AxClient/FinancialDimensionValidationService/validateLedgerAccount",
+          "host": [
+            "{{resource}}"
+          ],
+          "path": [
+            "api",
+            "services",
+            "AxClient",
+            "FinancialDimensionValidationService",
+            "validateLedgerAccount"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

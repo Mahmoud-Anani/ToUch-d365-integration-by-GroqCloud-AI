@@ -209,6 +209,35 @@ describe('Agent happy path', () => {
 
     expect(result.usage).toEqual({ promptTokens: 15, completionTokens: 5, totalTokens: 20 });
   });
+
+  it('reserves completion tokens for a final answer after tool work', async () => {
+    const provider = fakeProvider([
+      completion(
+        '',
+        [toolCall('analyzeData', { operation: 'count', entityName: 'CustomersV3' }, 'first')],
+        { completionTokens: 256 },
+      ),
+      completion(
+        '',
+        [toolCall('analyzeData', { operation: 'count', entityName: 'CustomersV3' }, 'second')],
+        { completionTokens: 216 },
+      ),
+    ]);
+    const tools = fakeTools();
+    const { promise } = runAgent(provider, tools.registry, {}, {
+      AI_MAX_TURN_COMPLETION_TOKENS: '600',
+      GROQ_MAX_COMPLETION_TOKENS: '256',
+    });
+
+    const result = await promise;
+
+    expect(result.content).toBe('Final synthesized answer');
+    expect(provider.generateWithTools.mock.calls.map((call) => call[2]?.maxCompletionTokens)).toEqual([
+      256,
+      216,
+    ]);
+    expect(provider.generateResponse.mock.calls[0]?.[1]?.maxCompletionTokens).toBe(128);
+  });
 });
 
 describe('Agent tool handling', () => {

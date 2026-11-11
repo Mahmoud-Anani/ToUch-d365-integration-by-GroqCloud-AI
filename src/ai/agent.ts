@@ -5,7 +5,14 @@ import { AttachmentCollector, type Attachment, type DataContextEntry, type Sourc
 import { buildSystemPrompt, formatDataContext } from './prompt';
 import { status, TOOL_PHASE, type AgentStatus } from './status';
 import type { ToolRegistry } from './tools';
-import type { AIProvider, AIMessage, AIUsage, ToolResultMessage } from './types';
+import type {
+  AICompletion,
+  AIProvider,
+  AIMessage,
+  AIUsage,
+  AITask,
+  ToolResultMessage,
+} from './types';
 
 export interface AgentHistoryMessage {
   role: 'user' | 'assistant';
@@ -33,6 +40,9 @@ export interface AgentResult {
   toolsUsed: string[];
   durationMs: number;
   model: string;
+  provider: string;
+  task: AITask;
+  fallbackUsed: boolean;
   complete: boolean;
 }
 
@@ -43,6 +53,24 @@ const FALLBACK_MESSAGE =
 
 function trimContent(value: string, max: number): string {
   return value.length > max ? `${value.slice(0, max)}…` : value;
+}
+
+function taskForQuestion(question: string): AITask {
+  const normalized = question.toLowerCase();
+  if (/root cause|سبب جذري|تحليل السبب/.test(normalized)) return 'root_cause_analysis';
+  if (/defect|waste|scrap|reject|عيوب|هالك|فاقد|مرفوض/.test(normalized)) {
+    return 'waste_defect_detection';
+  }
+  if (/efficien|productivity|throughput|كفاءة|إنتاجية|معدل الإنتاج/.test(normalized)) {
+    return 'manufacturing_efficiency_analysis';
+  }
+  if (/manufactur|production|factory|line output|تصنيع|إنتاج|مصنع/.test(normalized)) {
+    return 'production_analysis';
+  }
+  if (/customer|sales|inventory|supplier|order|revenue|مبيعات|مخزون|عميل|مورد|طلب/.test(normalized)) {
+    return 'general_question';
+  }
+  return 'general_question';
 }
 
 function parseToolArguments(raw: string): { value?: Record<string, unknown>; error?: string } {
@@ -89,14 +117,22 @@ export class Agent {
     const toolsUsed = new Set<string>();
     const usage: Required<AIUsage> = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
     let usageSeen = false;
+    let completionTokensUsed = 0;
+    let model = this.model;
+    let providerName = this.provider.primaryProviderName ?? this.provider.name;
+    const task = taskForQuestion(input.question);
     let iterations = 0;
 
-    const addUsage = (value?: AIUsage): void => {
-      if (!value) return;
-      usageSeen = true;
-      usage.promptTokens += value.promptTokens ?? 0;
-      usage.completionTokens += value.completionTokens ?? 0;
-      usage.totalTokens += value.totalTokens ?? 0;
+    const addUsage = (completion: AICompletion, requestedMaxTokens: number): void => {
+      model = completion.model ?? model;
+      providerName = completion.provider ?? providerName;
+      if (completion.usage) {
+        usageSeen = true;
+        usage.promptTokens += completion.usage.promptTokens ?? 0;
+        usage.completionTokens += completion.usage.completionTokens ?? 0;
+        usage.totalTokens += completion.usage.totalTokens ?? 0;
+      }
+      completionTokensUsed += completion.usage?.completionTokens ?? requestedMaxTokens;
     };
 
     const messages: AIMessage[] = [
@@ -138,13 +174,24 @@ export class Agent {
     try {
       let finalContent = '';
       let completed = false;
+      const finalTokenReserve = Math.min(
+        this.config.ai.maxCompletionTokens,
+        Math.max(128, Math.floor(this.config.ai.maxTurnCompletionTokens * 0.2)),
+      );
 
       for (let step = 0; step < this.config.ai.maxToolIterations; step += 1) {
+        const remainingTokens =
+          this.config.ai.maxTurnCompletionTokens - completionTokensUsed - finalTokenReserve;
+        const requestMaxTokens = Math.min(this.config.ai.maxCompletionTokens, remainingTokens);
+        if (requestMaxTokens <= 0) break;
+
         iterations = step + 1;
         const completion = await this.provider.generateWithTools(messages, this.tools.definitions, {
           signal: input.signal,
+          maxCompletionTokens: requestMaxTokens,
+          task,
         });
-        addUsage(completion.usage);
+        addUsage(completion, requestMaxTokens);
 
         if (completion.toolCalls.length === 0) {
           finalContent = completion.content.trim();
@@ -217,23 +264,50 @@ export class Agent {
       }
 
       if (!completed) {
-        safeEmit(input.emitStatus, status('preparing_response', { detail: 'Tool budget reached' }));
-        messages.push({
-          role: 'system',
-          content:
-            'The tool-call budget is exhausted. Using only the evidence already gathered, provide the best final answer now. State clearly what is partial or unknown. Do not call tools or invent data.',
-        });
-        const completion = await this.provider.generateResponse(messages, { signal: input.signal });
-        addUsage(completion.usage);
-        finalContent = completion.content.trim();
-        completed = true;
+        const remainingTokens = this.config.ai.maxTurnCompletionTokens - completionTokensUsed;
+        if (remainingTokens <= 0) {
+          finalContent = FALLBACK_MESSAGE;
+          completed = false;
+        } else {
+          safeEmit(
+            input.emitStatus,
+            status('preparing_response', {
+              detail:
+                completionTokensUsed + finalTokenReserve >=
+                this.config.ai.maxTurnCompletionTokens
+                  ? 'Completion token budget reached'
+                  : 'Tool budget reached',
+            }),
+          );
+          messages.push({
+            role: 'system',
+            content:
+              'The tool-call budget is exhausted, or the completion-token budget has been reached. Using only the evidence already gathered, provide the best final answer now. State clearly what is partial or unknown. Do not call tools or invent data.',
+          });
+          const completion = await this.provider.generateResponse(messages, {
+            signal: input.signal,
+            maxCompletionTokens: Math.min(this.config.ai.maxCompletionTokens, remainingTokens),
+            task: 'data_summarization',
+          });
+          addUsage(completion, Math.min(this.config.ai.maxCompletionTokens, remainingTokens));
+          finalContent = completion.content.trim();
+          completed = true;
+        }
       }
 
       if (!finalContent) {
         safeEmit(input.emitStatus, status('preparing_response'));
-        const completion = await this.provider.generateResponse(messages, { signal: input.signal });
-        addUsage(completion.usage);
-        finalContent = completion.content.trim();
+        const remainingTokens = this.config.ai.maxTurnCompletionTokens - completionTokensUsed;
+        if (remainingTokens > 0) {
+          const requestMaxTokens = Math.min(this.config.ai.maxCompletionTokens, remainingTokens);
+          const completion = await this.provider.generateResponse(messages, {
+            signal: input.signal,
+            maxCompletionTokens: requestMaxTokens,
+            task: 'data_summarization',
+          });
+          addUsage(completion, requestMaxTokens);
+          finalContent = completion.content.trim();
+        }
       }
 
       const content = finalContent || FALLBACK_MESSAGE;
@@ -247,7 +321,11 @@ export class Agent {
         ...(input.conversationId ? { conversationRef: input.conversationId } : {}),
         durationMs,
         metadata: {
-          model: this.model,
+          model,
+          provider: providerName,
+          task,
+          fallbackUsed:
+            providerName !== (this.provider.primaryProviderName ?? this.provider.name),
           iterations,
           tools: [...toolsUsed],
           totalTokens: usageSeen ? usage.totalTokens : undefined,
@@ -271,7 +349,11 @@ export class Agent {
         iterations,
         toolsUsed: [...toolsUsed],
         durationMs,
-        model: this.model,
+        model,
+        provider: providerName,
+        task,
+        fallbackUsed:
+          providerName !== (this.provider.primaryProviderName ?? this.provider.name),
         complete: completed,
       };
     } catch (error) {
@@ -283,7 +365,7 @@ export class Agent {
         ...(input.conversationId ? { conversationRef: input.conversationId } : {}),
         durationMs: Date.now() - started,
         errorCode: (error as { code?: string }).code ?? 'AI_ERROR',
-        metadata: { model: this.model, iterations, tools: [...toolsUsed] },
+        metadata: { model, iterations, tools: [...toolsUsed] },
       });
       throw error;
     }

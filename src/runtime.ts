@@ -7,12 +7,16 @@ import { MetadataService } from './metadata/service';
 import { QueryBuilder } from './query/builder';
 import { AnalyticsEngine } from './analytics/analytics';
 import { ToolRegistry } from './ai/tools';
-import { GroqProvider } from './ai/groq';
+import { OpenAICompatibleProvider } from './ai/groq';
+import { AIService, type AIServiceStatus } from './ai/fallback';
 import { Agent } from './ai/agent';
 import type { AIProvider } from './ai/types';
 import type { MetadataCatalogData } from './metadata/types';
 import { createConversationStore, type ConversationStore } from './chat/store';
 import { ChatService } from './chat/service';
+import { UserStore } from './auth/users';
+import { SessionService } from './auth/session';
+import { DashboardService } from './dashboard/service';
 
 export interface RuntimeOptions {
   fetchImpl?: FetchLike;
@@ -31,8 +35,12 @@ export interface AppServices {
   analytics: AnalyticsEngine;
   tools: ToolRegistry;
   agent: Agent;
+  aiStatus: () => AIServiceStatus;
   chat: ChatService;
   conversationStore: ConversationStore;
+  users: UserStore;
+  sessions: SessionService;
+  dashboard: DashboardService;
   aiConfigured: boolean;
   d365Configured: boolean;
   d365AuthMode: 'clientCredentials' | 'static' | 'none';
@@ -99,6 +107,13 @@ function createTokenSource(config: AppConfig, logger: Logger, fetchImpl?: FetchL
 
 export function createRuntime(config: AppConfig, options: RuntimeOptions = {}): AppServices {
   const logger = options.logger ?? createLogger(config.logLevel, config.auditLogFile);
+  const users = UserStore.load(config.auth.usersFile);
+  const sessions = new SessionService({
+    secret: config.auth.sessionSecret,
+    ttlMs: config.auth.sessionTtlMs,
+    cookieName: config.auth.cookieName,
+    secure: config.auth.cookieSecure,
+  });
   const token = createTokenSource(config, logger, options.fetchImpl);
   const d365Configured = Boolean(config.d365.baseUrl) && token.mode !== 'none';
 
@@ -123,19 +138,44 @@ export function createRuntime(config: AppConfig, options: RuntimeOptions = {}): 
   const queryBuilder = new QueryBuilder(metadata, config);
   const analytics = new AnalyticsEngine(client, metadata, queryBuilder, config);
   const tools = new ToolRegistry(metadata, queryBuilder, client, analytics, config, logger);
+  const dashboard = new DashboardService({
+    analytics,
+    queryBuilder,
+    client,
+    metadata,
+    logger,
+    searchMaxRows: config.d365.analyticsMaxRows,
+    searchPageSize: config.d365.pageSize,
+  });
 
-  const provider =
-    options.aiProvider ??
-    new GroqProvider({
-      apiKey: config.ai.apiKey,
-      baseUrl: config.ai.baseUrl,
-      model: config.ai.model,
-      temperature: config.ai.temperature,
-      timeoutMs: config.ai.timeoutMs,
-      maxCompletionTokens: config.ai.maxCompletionTokens,
-      ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
+  const configuredProviders = config.ai.providers.map(
+    (provider) =>
+      new OpenAICompatibleProvider({
+        ...provider,
+        temperature: config.ai.temperature,
+        timeoutMs: config.ai.timeoutMs,
+        maxCompletionTokens: config.ai.maxCompletionTokens,
+        capabilities: {
+          supportsTools: provider.supportsTools,
+          tasks: provider.tasks,
+          freeTier: provider.freeTier,
+          ...(provider.contextWindow ? { contextWindow: provider.contextWindow } : {}),
+        },
+        ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
+        logger,
+      }),
+  );
+  const aiService = new AIService(
+      configuredProviders,
+      {
+        fallbackEnabled: config.ai.fallbackEnabled,
+        cooldownMs: config.ai.providerCooldownMs,
+        maxCooldownMs: config.ai.providerMaxCooldownMs,
+        primaryProvider: config.ai.primaryProvider,
+      },
       logger,
-    });
+    );
+  const provider = options.aiProvider ?? aiService;
 
   const agent = new Agent(provider, tools, config, logger);
 
@@ -160,9 +200,13 @@ export function createRuntime(config: AppConfig, options: RuntimeOptions = {}): 
     analytics,
     tools,
     agent,
+    aiStatus: () => aiService.status(),
     chat,
     conversationStore,
-    aiConfigured: Boolean(config.ai.apiKey),
+    users,
+    sessions,
+    dashboard,
+    aiConfigured: configuredProviders.length > 0 || options.aiProvider !== undefined,
     d365Configured,
     d365AuthMode: token.mode,
     startedAt: Date.now(),

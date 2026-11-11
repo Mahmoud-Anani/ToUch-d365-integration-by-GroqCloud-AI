@@ -13,6 +13,7 @@ export type ErrorCode =
   | 'AI_AUTH_ERROR'
   | 'AI_MODEL_ERROR'
   | 'AI_RATE_LIMITED'
+  | 'AI_QUOTA_EXHAUSTED'
   | 'AI_CONTEXT_LENGTH'
   | 'AI_INVALID_RESPONSE'
   | 'TOOL_ERROR'
@@ -127,14 +128,22 @@ export class D365Error extends AppError {
 
 export class AIProviderError extends AppError {
   constructor(options: {
-    code: 'AI_UNAVAILABLE' | 'AI_AUTH_ERROR' | 'AI_MODEL_ERROR' | 'AI_RATE_LIMITED' | 'AI_CONTEXT_LENGTH' | 'AI_INVALID_RESPONSE';
+    code:
+      | 'AI_UNAVAILABLE'
+      | 'AI_AUTH_ERROR'
+      | 'AI_MODEL_ERROR'
+      | 'AI_RATE_LIMITED'
+      | 'AI_QUOTA_EXHAUSTED'
+      | 'AI_CONTEXT_LENGTH'
+      | 'AI_INVALID_RESPONSE';
     publicMessage: string;
     message?: string;
     retryAfterSeconds?: number;
     details?: Record<string, unknown>;
     cause?: unknown;
   }) {
-    const status = options.code === 'AI_RATE_LIMITED' ? 429 : 502;
+    const status =
+      options.code === 'AI_RATE_LIMITED' || options.code === 'AI_QUOTA_EXHAUSTED' ? 429 : 502;
     super({
       status,
       code: options.code,

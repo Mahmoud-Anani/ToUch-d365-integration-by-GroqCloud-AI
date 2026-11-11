@@ -1,10 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../src/app';
 import { createRuntime } from '../src/runtime';
 import type { AppServices } from '../src/runtime';
 import type { AIProvider } from '../src/ai/types';
-import { catalogData, testConfig, testLogger } from './helpers';
+import { catalogData, TEST_PASSWORD, testConfig, testLogger } from './helpers';
 
 function createTestServices() {
   const config = testConfig({
@@ -32,45 +32,87 @@ function createTestApp() {
   return createApp(createTestServices());
 }
 
-describe('HTTP API without user-entered application keys', () => {
-  it('allows API access without an application key', async () => {
+async function signIn(app: ReturnType<typeof createApp>, username: string) {
+  const agent = request.agent(app);
+  await agent
+    .post('/api/auth/login')
+    .send({ username, password: TEST_PASSWORD })
+    .expect(200);
+  return agent;
+}
+
+describe('HTTP API with mandatory login', () => {
+  it('keeps health public and requires a session for project APIs', async () => {
     const app = createTestApp();
 
     const health = await request(app).get('/api/health').expect(200);
     expect(health.body.application).toBe('Touch El-Zanouki Business Intelligence');
-    expect(health.body.authRequired).toBe(false);
-    await request(app).get('/api/conversations').expect(200);
+    expect(health.body.authRequired).toBe(true);
+    expect(health.body.ai).toMatchObject({
+      configured: true,
+      providers: [{ name: 'groq', requests: 0, successfulRequests: 0 }],
+    });
+    expect(JSON.stringify(health.body.ai)).not.toContain('test-groq-key');
+
+    await request(app).get('/api/conversations').expect(401).expect('Content-Type', /json/);
+    await request(app).get('/api/dashboard/modules').expect(401);
+
+    const agent = await signIn(app, 'test');
+    await agent.get('/api/conversations').expect(200);
   });
 
-  it('isolates conversations when a trusted proxy supplies user identity', async () => {
+  it('rejects invalid credentials without revealing which field failed', async () => {
     const app = createTestApp();
-    const headers = (userId: string) => ({
-      'x-user-id': userId,
-    });
 
-    const created = await request(app)
+    const response = await request(app)
+      .post('/api/auth/login')
+      .send({ username: 'test', password: 'wrong-password' })
+      .expect(401);
+    expect(response.body.error.code).toBe('UNAUTHORIZED');
+    expect(response.body.error.message).toBe('Invalid username or password.');
+  });
+
+  it('uses a configured fallback provider when the primary key is absent', async () => {
+    const config = testConfig({
+      GROQ_API_KEY: undefined,
+      AI_FALLBACK_PROVIDERS: JSON.stringify([
+        {
+          name: 'backup',
+          apiKey: 'backup-key',
+          baseUrl: 'https://api.example.ai/v1',
+          model: 'backup-model',
+        },
+      ]),
+    });
+    const { logger } = testLogger();
+    const services = createRuntime(config, { initialCatalog: catalogData(), logger });
+
+    expect(services.aiConfigured).toBe(true);
+    const health = await request(createApp(services)).get('/api/health').expect(200);
+    expect(health.body.ai).toMatchObject({ configured: true, model: 'backup-model' });
+  });
+
+  it('isolates conversations per signed-in user', async () => {
+    const app = createTestApp();
+    const alice = await signIn(app, 'alice');
+    const bob = await signIn(app, 'bob');
+
+    const created = await alice
       .post('/api/conversations')
-      .set(headers('alice'))
       .send({ title: 'Alice conversation' })
       .expect(201);
     const conversationId = created.body.conversation.id as string;
 
-    await request(app)
-      .get(`/api/conversations/${conversationId}`)
-      .set(headers('bob'))
-      .expect(404);
-    await request(app)
-      .get(`/api/conversations/${conversationId}`)
-      .set(headers('alice'))
-      .expect(200);
+    await bob.get(`/api/conversations/${conversationId}`).expect(404);
+    await alice.get(`/api/conversations/${conversationId}`).expect(200);
   });
 
-  it('rejects malformed trusted user identities', async () => {
+  it('ignores the legacy trusted x-user-id header', async () => {
     const app = createTestApp();
 
     await request(app)
       .get('/api/conversations')
-      .set('x-user-id', 'invalid user id')
+      .set('x-user-id', 'alice')
       .expect(401);
   });
 
@@ -85,16 +127,131 @@ describe('HTTP API without user-entered application keys', () => {
       warnings: [],
     });
     const app = createApp(services);
+    const agent = await signIn(app, 'test');
 
-    const refresh = await request(app).post('/api/metadata/refresh').expect(200);
+    const refresh = await agent.post('/api/metadata/refresh').expect(200);
     expect(refresh.body.loaded).toBe(true);
 
-    const stream = await request(app)
+    const stream = await agent
       .post('/api/chat/stream')
       .send({ message: 'اعرض المنتجات', locale: 'ar' })
       .expect(200)
       .expect('Content-Type', /text\/event-stream/);
     expect(stream.text).toContain('event: final');
     expect(stream.text).toContain('"content":"ok"');
+  });
+
+  it('lists dashboard modules and serves validated module records', async () => {
+    const services = createTestServices();
+    const app = createApp(services);
+    const agent = await signIn(app, 'test');
+
+    const modules = await agent.get('/api/dashboard/modules').expect(200);
+    expect(modules.body.modules.length).toBeGreaterThanOrEqual(10);
+    expect(modules.body.modules.map((module: { id: string }) => module.id)).toContain('customers');
+
+    // Live D365 rejects contains()/startswith(), so searched record queries
+    // scan server-ordered rows and filter in memory (case-insensitive).
+    const fetchAllPages = vi.spyOn(services.client, 'fetchAllPages').mockResolvedValue({
+      rows: [
+        { CustomerAccount: 'C-0001', OrganizationName: 'Contoso' },
+        { CustomerAccount: 'C-0002', OrganizationName: 'Fabrikam' },
+        { CustomerAccount: 'C-0003', OrganizationName: 'contoso retail' },
+      ],
+      complete: true,
+      pages: 1,
+      scanned: 3,
+    });
+
+    // Apostrophes survive end-to-end: no OData string is built from search
+    // text, so nothing needs escaping and no injection is possible.
+    const records = await agent
+      .get('/api/dashboard/modules/customers/records')
+      .query({ search: "O'Brien", top: 10 })
+      .expect(200);
+
+    expect(fetchAllPages).toHaveBeenCalledTimes(1);
+    expect(records.body.records).toEqual([]);
+    expect(records.body.total).toBe(0);
+
+    const found = await agent
+      .get('/api/dashboard/modules/customers/records')
+      .query({ search: 'CONTOSO', top: 10 })
+      .expect(200);
+    expect(found.body.records).toEqual([
+      { CustomerAccount: 'C-0001', OrganizationName: 'Contoso' },
+      { CustomerAccount: 'C-0003', OrganizationName: 'contoso retail' },
+    ]);
+    expect(found.body.total).toBe(2);
+    expect(found.body.columns.map((column: { name: string }) => column.name)).toContain('CustomerAccount');
+
+    const paged = await agent
+      .get('/api/dashboard/modules/customers/records')
+      .query({ search: 'contoso', top: 1, skip: 1 })
+      .expect(200);
+    expect(paged.body.records).toEqual([
+      { CustomerAccount: 'C-0003', OrganizationName: 'contoso retail' },
+    ]);
+    expect(paged.body.total).toBe(2);
+    expect(paged.body.hasMore).toBe(false);
+  });
+
+  it('returns 404 for an unknown dashboard module', async () => {
+    const app = createTestApp();
+    const agent = await signIn(app, 'test');
+
+    await agent.get('/api/dashboard/modules/not-a-module/records').expect(404);
+  });
+
+  it('serves chart drill-downs and rejects non-drillable breakdowns', async () => {
+    const services = createTestServices();
+    const app = createApp(services);
+    const agent = await signIn(app, 'test');
+
+    // Unknown breakdown → 404; breakdown without a drill field or key → 400.
+    await agent
+      .get('/api/dashboard/analysis/not-a-breakdown/drilldown')
+      .query({ key: 'x' })
+      .expect(404);
+    await agent
+      .get('/api/dashboard/analysis/customers-by-group/drilldown')
+      .query({ key: 'x' })
+      .expect(400);
+    await agent.get('/api/dashboard/analysis/returns-by-reason/drilldown').expect(400);
+
+    const run = vi.spyOn(services.analytics, 'run').mockResolvedValue({
+      operation: 'groupBy',
+      entitySet: 'ReturnOrderHeadersV2',
+      entityType: 'ReturnOrderHeadersV2',
+      recordsScanned: 4,
+      recordsUsed: 4,
+      nullOrMissing: 0,
+      complete: true,
+      method: 'scan',
+      groups: [{ key: 'C-0001', count: 4 }],
+      groupCount: 1,
+      notes: [],
+    } as never);
+
+    const drill = await agent
+      .get('/api/dashboard/analysis/returns-by-reason/drilldown')
+      .query({ key: 'QUALITY' })
+      .expect(200);
+
+    expect(run).toHaveBeenCalledWith(
+      expect.objectContaining({
+        operation: 'groupBy',
+        entityName: 'ReturnOrderHeadersV2',
+        groupByField: 'CustomerAccountNumber',
+        filter: "CustomerReturnReasonCode eq 'QUALITY'",
+      }),
+    );
+    expect(drill.body).toMatchObject({
+      status: 'ok',
+      drillKey: 'QUALITY',
+      parentGroupByField: 'CustomerReturnReasonCode',
+      groupByField: 'CustomerAccountNumber',
+    });
+    expect(drill.body.groups[0]).toMatchObject({ key: 'C-0001', count: 4 });
   });
 });

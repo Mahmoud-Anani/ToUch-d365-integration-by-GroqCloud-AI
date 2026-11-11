@@ -20,7 +20,7 @@ function main(): void {
     logger.info('Touch El-Zanouki Business Intelligence started', {
       host,
       port: config.port,
-      model: config.ai.model,
+      model: services.agent.model,
       readOnly: true,
       d365Configured: services.d365Configured,
       aiConfigured: services.aiConfigured,

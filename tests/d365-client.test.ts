@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { D365Client, type D365ClientOptions } from '../src/d365/client';
+import { TokenProvider } from '../src/d365/auth';
 import { AppError, D365Error } from '../src/errors';
 import {
   abortError,
@@ -549,5 +550,48 @@ describe('D365Client error handling', () => {
     await expect(
       client.getAbsolute(`${DATA_URL}/CustomersV3`, { signal: controller.signal }),
     ).rejects.toMatchObject({ details: { reason: 'TIMEOUT' } });
+  });
+});
+
+describe('TokenProvider transient network retry', () => {
+  function makeProvider(fetchImpl: unknown) {
+    return new TokenProvider({
+      tokenUrl: 'https://login.microsoftonline.com/test/oauth2/v2.0/token',
+      clientId: 'client',
+      clientSecret: 'secret',
+      scope: 'https://test.operations.dynamics.com/.default',
+      timeoutMs: 5_000,
+      fetchImpl: fetchImpl as never,
+    });
+  }
+
+  it('recovers when the first token request fails at the network layer', async () => {
+    let calls = 0;
+    const fetchImpl = vi.fn(async () => {
+      calls += 1;
+      if (calls === 1) throw new TypeError('fetch failed');
+      return jsonResponse({ access_token: 'token-123', expires_in: 3600 });
+    });
+    const provider = makeProvider(fetchImpl);
+    await expect(provider.getToken()).resolves.toBe('token-123');
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it('throws after three consecutive network failures', async () => {
+    const fetchImpl = vi.fn(async () => {
+      throw new TypeError('fetch failed');
+    });
+    const provider = makeProvider(fetchImpl);
+    await expect(provider.getToken()).rejects.toBeInstanceOf(D365Error);
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
+  });
+
+  it('does not retry OAuth rejections', async () => {
+    const fetchImpl = vi.fn(async () =>
+      jsonResponse({ error: 'invalid_client' }, { status: 401 }),
+    );
+    const provider = makeProvider(fetchImpl);
+    await expect(provider.getToken()).rejects.toBeInstanceOf(D365Error);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 });

@@ -14,13 +14,33 @@
       open_sidebar: 'Open sidebar',
       new_chat: 'New conversation',
       history: 'History',
+      workspace: 'Workspace',
+      overview: 'Overview',
+      recent_conversations: 'Recent conversations',
+      data_connection: 'Data connection',
       refresh_conversations: 'Refresh conversations',
       metadata_loading: 'Loading metadata…',
       refresh_metadata: 'Refresh metadata',
       read_only_note: 'Read-only access. No ERP records can be changed.',
-      subtitle_default: 'Touch home-appliance business intelligence',
+      subtitle_default: 'Live ERP insights for the Touch business',
       subtitle_messages: '{n} messages · updated {when}',
       empty_title: 'A clearer view of the Touch business',
+      dashboard_kicker: 'D365 INTEGRATION',
+      dashboard_cta: 'Ask your first question',
+      workspace_status: 'Workspace status',
+      workspace_status_hint: 'A live view of the tools behind your answers',
+      read_only_badge: 'READ ONLY',
+      erp_source: 'ERP source',
+      ai_assistant: 'AI assistant',
+      business_catalog: 'Business catalog',
+      status_checking: 'Checking…',
+      status_configured: 'Configured',
+      status_setup: 'Setup required',
+      status_ready: 'Ready',
+      status_unavailable: 'Unavailable',
+      catalog_entities: '{n} queryable entities',
+      start_with: 'Start with a question',
+      suggestions_hint: 'Choose a topic to explore',
       empty_body:
         'Ask about products, stock, sales, purchasing, and more. Touch Business Intelligence checks live ERP data and shows where every answer comes from—without changing records.',
       empty_hint: 'Built around Touch appliances. Every business answer is grounded in live ERP data; partial results are clearly labelled.',
@@ -92,22 +112,121 @@
       error_code: 'Error: {code}',
       offline: 'Offline',
       online: 'Online',
+      nav_dashboard: 'Dashboard',
+      nav_chat: 'Chat',
+      sidebar_label: 'Workspace navigation',
+      conversations: 'Conversations',
+      view_dashboard_title: 'D365 Integration Dashboard',
+      view_dashboard_subtitle: 'Live Dynamics 365 · Analysis &amp; System Modules',
+      view_chat_title: 'Conversations',
+      view_chat_subtitle: 'Ask questions about your D365 business data',
+      dashboard_title: 'Live Dynamics 365 data, one clear view',
+      dashboard_body:
+        'Live Dynamics 365 analysis and read-only records from the integration map, presented in one bilingual workspace.',
+      dashboard_updated: 'Updated {when}',
+      dashboard_loading: 'Loading dashboard…',
+      dashboard_refreshed: 'Dashboard refreshed.',
+      refresh: 'Refresh',
+      refreshing: 'Refreshing…',
+      open_chat: 'Ask a question',
+      analysis_title: 'D365 data analysis',
+      analysis_hint: 'Live counts and breakdowns from the entities used by the assistant',
+      analysis_unavailable: 'Analysis unavailable.',
+      analysis_groups: '{n} groups',
+      analysis_scanned: '{n} records scanned',
+      analysis_partial: 'Partial scan',
+      analysis_top_share: 'Top {key} · {pct}%',
+      chart_bar: 'Bars',
+      chart_donut: 'Donut',
+      chart_column: 'Columns',
+      chart_sort_top: 'Top',
+      chart_sort_name: 'A–Z',
+      chart_sort_value: 'Value',
+      chart_drill_hint: 'Select a bar to drill down',
+      chart_drill_back: 'Back',
+      chart_drill_loading: 'Loading details…',
+      chart_drill_of: '{key} · details',
+      chart_drill_by: 'Grouped by {field}',
+      analysis_selected: 'Selected {key} · {n} · {pct}%',
+      decision_ratio_title: 'Sales vs returns',
+      decision_ratio_caption: '{returns} return orders out of {sales} sales orders',
+      decision_sales_label: 'Sales',
+      decision_returns_label: 'Returns',
+      decision_view_sales: 'View sales orders',
+      decision_view_returns: 'View return orders',
+      decision_insight_high: 'Action: return rate is high — review the return reasons below.',
+      decision_insight_watch: 'Watch: return rate is elevated.',
+      decision_insight_low: 'Healthy: return rate is low.',
+      decision_insight_unknown: 'Return rate unavailable — sales or returns could not be counted.',
+      kpi_empty: 'Module counts are not available yet.',
+      kpi_unavailable: 'Unavailable',
+      modules_title: 'System modules',
+      modules_hint: 'Browse read-only records from the integration map entities',
+      modules_available: '{available} of {total} modules available',
+      module_state_ok: 'Available',
+      module_state_unavailable: 'Unavailable',
+      module_records: '{n} records',
+      module_records_unknown: 'Records',
+      module_browse: 'Browse',
+      module_search_label: 'Search records',
+      module_search_placeholder: 'Search records…',
+      search: 'Search',
+      clear: 'Clear',
+      previous: 'Previous',
+      next: 'Next',
+      page_info: '{from}–{to} of {total}',
+      page_info_unknown: '{from}–{to}',
+      module_loading: 'Loading records…',
+      module_no_records: 'No records found.',
+      module_search_hint: 'Search is not available for this module.',
+      module_records_error: 'Records could not be loaded.',
+      module_total_unknown: 'Total unavailable',
+      close: 'Close',
+      sign_out: 'Sign out',
+      signed_in_as: 'Signed in as {name}',
+      session_expired: 'Your session expired. Please sign in again.',
+      category_sales: 'Sales',
+      category_procurement: 'Procurement',
+      category_finance: 'Finance',
+      category_organization: 'Organization',
+      status_ok: 'Live',
+      status_partial: 'Partial',
     },
     ar: {
       skip: 'انتقل إلى حقل الرسالة',
       brand: 'Touch El-Zanouki',
-      brand_sub: 'ذكاء الأعمال · مجموعة الزنوقي',
+      brand_sub: 'ذكاء الأعمال · مجموعة الزنوكي',
       close_sidebar: 'إغلاق الشريط الجانبي',
       open_sidebar: 'فتح الشريط الجانبي',
       new_chat: 'محادثة جديدة',
       history: 'السجل',
+      workspace: 'مساحة العمل',
+      overview: 'نظرة عامة',
+      recent_conversations: 'المحادثات الأخيرة',
+      data_connection: 'اتصال البيانات',
       refresh_conversations: 'تحديث المحادثات',
       metadata_loading: 'جارٍ تحميل البيانات الوصفية…',
       refresh_metadata: 'تحديث البيانات الوصفية',
       read_only_note: 'وصول للقراءة فقط. لا يمكن تعديل أي سجلات في النظام.',
-      subtitle_default: 'ذكاء أعمال الأجهزة المنزلية من Touch',
+      subtitle_default: 'رؤى مباشرة من نظام ERP لأعمال Touch',
       subtitle_messages: '{n} رسالة · آخر تحديث {when}',
       empty_title: 'رؤية أوضح لأعمال Touch',
+      dashboard_kicker: 'تكامل D365',
+      dashboard_cta: 'اطرح سؤالك الأول',
+      workspace_status: 'حالة مساحة العمل',
+      workspace_status_hint: 'عرض مباشر للأدوات التي تدعم إجاباتك',
+      read_only_badge: 'للقراءة فقط',
+      erp_source: 'مصدر ERP',
+      ai_assistant: 'المساعد الذكي',
+      business_catalog: 'فهرس الأعمال',
+      status_checking: 'جارٍ التحقق…',
+      status_configured: 'تم الإعداد',
+      status_setup: 'الإعداد مطلوب',
+      status_ready: 'جاهز',
+      status_unavailable: 'غير متاح',
+      catalog_entities: '{n} كيان قابل للاستعلام',
+      start_with: 'ابدأ بسؤال',
+      suggestions_hint: 'اختر موضوعاً لاستكشافه',
       empty_body:
         'اسأل عن المنتجات والمخزون والمبيعات والمشتريات وغيرها. يتحقق ذكاء أعمال Touch من بيانات النظام الفعلية ويوضح مصدر كل إجابة دون تعديل أي سجل.',
       empty_hint: 'مخصص لأعمال أجهزة Touch. كل إجابة عن الأعمال تستند إلى بيانات ERP مباشرة، وتُوضّح النتائج الجزئية.',
@@ -179,6 +298,85 @@
       error_code: 'خطأ: {code}',
       offline: 'غير متصل',
       online: 'متصل',
+      nav_dashboard: 'لوحة المعلومات',
+      nav_chat: 'المحادثة',
+      sidebar_label: 'التنقل في مساحة العمل',
+      conversations: 'المحادثات',
+      view_dashboard_title: 'لوحة تكامل D365',
+      view_dashboard_subtitle: 'بيانات D365 المباشرة · التحليل ووحدات النظام',
+      view_chat_title: 'المحادثات',
+      view_chat_subtitle: 'اسأل عن بيانات أعمال D365',
+      dashboard_title: 'رؤية واحدة واضحة للأعمال',
+      dashboard_body:
+        'تحليل مباشر من Dynamics 365 وسجلات للقراءة فقط من خريطة التكامل، في مساحة عمل واحدة ثنائية اللغة.',
+      dashboard_updated: 'آخر تحديث {when}',
+      dashboard_loading: 'جارٍ تحميل لوحة المعلومات…',
+      dashboard_refreshed: 'تم تحديث لوحة المعلومات.',
+      refresh: 'تحديث',
+      refreshing: 'جارٍ التحديث…',
+      open_chat: 'اطرح سؤالاً',
+      analysis_title: 'تحليل بيانات D365',
+      analysis_hint: 'أعداد وتحليلات مباشرة من الكيانات التي يستخدمها المساعد',
+      analysis_unavailable: 'التحليل غير متاح.',
+      analysis_groups: '{n} مجموعة',
+      analysis_scanned: 'تم فحص {n} سجل',
+      analysis_partial: 'فحص جزئي',
+      analysis_top_share: 'الأعلى: {key} · {pct}%',
+      chart_bar: 'القضبان',
+      chart_donut: 'دائري',
+      chart_column: 'الأعمدة',
+      chart_sort_top: 'الأعلى',
+      chart_sort_name: 'أبجدي',
+      chart_sort_value: 'القيمة',
+      chart_drill_hint: 'اختر قضباً لعرض التفاصيل',
+      chart_drill_back: 'رجوع',
+      chart_drill_loading: 'جارٍ تحميل التفاصيل…',
+      chart_drill_of: '{key} · التفاصيل',
+      chart_drill_by: 'مجمّع حسب {field}',
+      analysis_selected: 'المحدد {key} · {n} · {pct}%',
+      decision_ratio_title: 'المبيعات مقابل المرتجعات',
+      decision_ratio_caption: '{returns} أمر مرتجع من أصل {sales} أمر بيع',
+      decision_sales_label: 'المبيعات',
+      decision_returns_label: 'المرتجعات',
+      decision_view_sales: 'عرض أوامر البيع',
+      decision_view_returns: 'عرض أوامر المرتجع',
+      decision_insight_high: 'إجراء: معدل المرتجعات مرتفع — راجع أسباب المرتجعات أدناه.',
+      decision_insight_watch: 'متابعة: معدل المرتجعات مرتفع قليلاً.',
+      decision_insight_low: 'جيد: معدل المرتجعات منخفض.',
+      decision_insight_unknown: 'معدل المرتجعات غير متاح — تعذّر عدّ المبيعات أو المرتجعات.',
+      kpi_empty: 'أعداد الوحدات غير متاحة بعد.',
+      kpi_unavailable: 'غير متاح',
+      modules_title: 'وحدات النظام',
+      modules_hint: 'استعرض سجلات للقراءة فقط من كيانات خريطة التكامل',
+      modules_available: '{available} من {total} وحدة متاحة',
+      module_state_ok: 'متاح',
+      module_state_unavailable: 'غير متاح',
+      module_records: '{n} سجل',
+      module_records_unknown: 'السجلات',
+      module_browse: 'استعراض',
+      module_search_label: 'البحث في السجلات',
+      module_search_placeholder: 'ابحث في السجلات…',
+      search: 'بحث',
+      clear: 'مسح',
+      previous: 'السابق',
+      next: 'التالي',
+      page_info: '{from}–{to} من {total}',
+      page_info_unknown: '{from}–{to}',
+      module_loading: 'جارٍ تحميل السجلات…',
+      module_no_records: 'لا توجد سجلات.',
+      module_search_hint: 'البحث غير متاح لهذه الوحدة.',
+      module_records_error: 'تعذر تحميل السجلات.',
+      module_total_unknown: 'الإجمالي غير متاح',
+      close: 'إغلاق',
+      sign_out: 'تسجيل الخروج',
+      signed_in_as: 'مسجل الدخول باسم {name}',
+      session_expired: 'انتهت جلستك. يرجى تسجيل الدخول مجدداً.',
+      category_sales: 'المبيعات',
+      category_procurement: 'المشتريات',
+      category_finance: 'المالية',
+      category_organization: 'التنظيم',
+      status_ok: 'مباشر',
+      status_partial: 'جزئي',
     },
   };
 
@@ -201,12 +399,35 @@
   const state = {
     lang: localStorage.getItem(LS_LANG) || (String(navigator.language || 'en').toLowerCase().startsWith('ar') ? 'ar' : 'en'),
     theme: localStorage.getItem(LS_THEME) || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
+    view: 'dashboard',
+    user: null,
+    redirecting: false,
     conversations: [],
+    conversationsLoaded: false,
+    conversationsLoading: false,
     current: null,
     sending: false,
     abort: null,
     statusSteps: [],
     health: null,
+    dashboard: {
+      overview: null,
+      analysis: null,
+      modules: null,
+      loading: false,
+      loaded: false,
+      error: null,
+      refreshedAt: null,
+    },
+    activeModule: null,
+    records: {
+      loading: false,
+      error: null,
+      search: '',
+      top: 25,
+      skip: 0,
+      data: null,
+    },
     modal: null,
     modalBusy: false,
     lastFocus: null,
@@ -218,20 +439,63 @@
   const dom = {
     html: document.documentElement,
     themeColor: $('theme-color-meta'),
+    connectionIndicator: $('connection-indicator'),
     sidebar: $('sidebar'),
     sidebarBackdrop: $('sidebar-backdrop'),
     sidebarClose: $('sidebar-close'),
     menuToggle: $('menu-toggle'),
+    dashboardNav: $('dashboard-nav'),
+    chatNav: $('chat-nav'),
+    conversationSection: $('conversation-section'),
     newChat: $('new-chat'),
     conversations: $('conversation-list'),
     refreshConversations: $('refresh-conversations'),
     metadataPill: $('metadata-pill'),
     metadataText: $('metadata-text'),
     refreshMetadata: $('refresh-metadata'),
-    chatTitle: $('chat-title'),
-    chatSubtitle: $('chat-subtitle'),
+    accountCard: $('account-card'),
+    accountAvatar: $('account-avatar'),
+    accountName: $('account-name'),
+    accountRole: $('account-role'),
+    logoutBtn: $('logout-btn'),
+    viewTitle: $('view-title'),
+    viewSubtitle: $('view-subtitle'),
+    topbarUser: $('topbar-user'),
     langToggle: $('lang-toggle'),
     themeToggle: $('theme-toggle'),
+    dashboardView: $('dashboard-view'),
+    moduleView: $('module-view'),
+    dashboardScroll: $('dashboard-scroll'),
+    dashboardUpdated: $('dashboard-updated'),
+    refreshDashboard: $('refresh-dashboard'),
+    dashboardGoChat: $('dashboard-go-chat'),
+    erpStatus: $('erp-status'),
+    erpStatusDot: $('erp-status-dot'),
+    aiStatus: $('ai-status'),
+    aiStatusDot: $('ai-status-dot'),
+    catalogStatus: $('catalog-status'),
+    catalogStatusDot: $('catalog-status-dot'),
+    kpiGrid: $('kpi-grid'),
+    decisionGrid: $('decision-grid'),
+    analysisGrid: $('analysis-grid'),
+    analysisStatus: $('analysis-status'),
+    modulesStatus: $('modules-status'),
+    moduleGrid: $('module-grid'),
+    moduleBrowser: $('module-browser'),
+    moduleBrowserClose: $('module-browser-close'),
+    moduleBrowserCategory: $('module-browser-category'),
+    moduleBrowserTitle: $('module-browser-title'),
+    moduleBrowserDescription: $('module-browser-description'),
+    moduleBrowserCount: $('module-browser-count'),
+    moduleSearch: $('module-search'),
+    moduleSearchInput: $('module-search-input'),
+    moduleSearchBtn: $('module-search-btn'),
+    moduleSearchClear: $('module-search-clear'),
+    moduleTableWrap: $('module-table-wrap'),
+    modulePrev: $('module-prev'),
+    modulePageInfo: $('module-page-info'),
+    moduleNext: $('module-next'),
+    chatView: $('chat-view'),
     messages: $('messages'),
     empty: $('empty-state'),
     suggestions: $('suggestions'),
@@ -458,7 +722,7 @@
 
   function applyTheme() {
     dom.html.dataset.theme = state.theme;
-    dom.themeColor.setAttribute('content', state.theme === 'dark' ? '#191514' : '#fff8f7');
+    dom.themeColor.setAttribute('content', state.theme === 'dark' ? '#151d19' : '#f5f7f4');
     dom.themeToggle.setAttribute(
       'aria-label',
       state.theme === 'dark' ? (state.lang === 'ar' ? 'الوضع الفاتح' : 'Switch to light theme') : state.lang === 'ar' ? 'الوضع الداكن' : 'Switch to dark theme',
@@ -468,7 +732,7 @@
   function applyLanguage() {
     dom.html.lang = state.lang;
     dom.html.dir = state.lang === 'ar' ? 'rtl' : 'ltr';
-    document.title = `${t('brand')} · ${state.lang === 'ar' ? 'ذكاء الأعمال' : 'Business Intelligence'}`;
+    document.title = `${t('brand')} · ${t(state.view === 'dashboard' ? 'view_dashboard_title' : 'view_chat_title')}`;
     document.querySelectorAll('[data-i18n]').forEach((element) => {
       const key = element.getAttribute('data-i18n');
       if (key) element.textContent = t(key);
@@ -487,26 +751,1275 @@
     dom.modalConfirm.textContent = t('confirm');
     renderSuggestions();
     applyTheme();
-    updateTitle();
+    updateViewChrome();
     updateMetaPill(state.health ? state.health.metadata : null);
-    if (state.current && !state.sending) renderConversation(state.current);
+    renderAccount();
+    renderDashboard();
+    if (state.current && !state.sending && state.view === 'chat') renderConversation(state.current);
+  }
+
+  function updateViewChrome() {
+    const moduleTitle = state.view === 'module'
+      ? localizedText(moduleDefinition(state.activeModule)?.title) || state.activeModule || t('modules_title')
+      : '';
+    document.title = `${t('brand')} · ${state.view === 'dashboard' ? t('view_dashboard_title') : state.view === 'module' ? moduleTitle : t('view_chat_title')}`;
+    if (state.view === 'dashboard') {
+      dom.viewTitle.textContent = t('view_dashboard_title');
+      dom.viewSubtitle.textContent = t('view_dashboard_subtitle');
+      return;
+    }
+    if (state.view === 'module') {
+      dom.viewTitle.textContent = moduleTitle;
+      dom.viewSubtitle.textContent = localizedText(moduleDefinition(state.activeModule)?.description) || '';
+      return;
+    }
+    dom.viewTitle.textContent = state.current ? state.current.title : t('view_chat_title');
+    dom.viewSubtitle.textContent = state.current
+      ? t('subtitle_messages', {
+          n: state.current.messages.length,
+          when: formatRelative(state.current.updatedAt),
+        })
+      : t('view_chat_subtitle');
   }
 
   function updateTitle() {
-    dom.chatTitle.textContent = state.current ? state.current.title : t('new_chat');
-    if (state.current) {
-      dom.chatSubtitle.textContent = t('subtitle_messages', {
-        n: state.current.messages.length,
-        when: formatRelative(state.current.updatedAt),
-      });
-    } else {
-      dom.chatSubtitle.textContent = t('subtitle_default');
-    }
+    if (state.view === 'chat') updateViewChrome();
   }
 
   function setEmptyVisible(visible) {
     dom.empty.hidden = !visible;
     dom.messages.hidden = visible;
+  }
+
+  // --- Session and account -------------------------------------------------
+
+  function redirectToLogin() {
+    if (state.redirecting) return;
+    state.redirecting = true;
+    const next = `${window.location.pathname}${window.location.search}`;
+    const safeNext = next.startsWith('/') && !next.startsWith('//') ? next : '/';
+    window.location.replace(`/login?next=${encodeURIComponent(safeNext)}`);
+  }
+
+  function initials(value) {
+    const parts = String(value || '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '?';
+    if (parts.length === 1) return parts[0].slice(0, 1).toUpperCase();
+    return `${parts[0].slice(0, 1)}${parts[parts.length - 1].slice(0, 1)}`.toUpperCase();
+  }
+
+  function renderAccount() {
+    if (!state.user) {
+      dom.accountCard.hidden = true;
+      dom.topbarUser.hidden = true;
+      return;
+    }
+    const name = state.user.displayName || state.user.username || '';
+    dom.accountName.textContent = name;
+    dom.accountRole.textContent = state.user.role || '';
+    dom.accountAvatar.textContent = initials(name);
+    dom.accountCard.hidden = false;
+    dom.topbarUser.hidden = false;
+    dom.topbarUser.textContent = t('signed_in_as', { name });
+    dom.logoutBtn.title = t('sign_out');
+    dom.accountCard.title = state.user.role ? `${name} · ${state.user.role}` : name;
+  }
+
+  async function logout() {
+    dom.logoutBtn.disabled = true;
+    try {
+      await api('/api/auth/logout', { method: 'POST' });
+    } catch {
+      // The redirect still applies when the server cannot be reached.
+    }
+    state.user = null;
+    window.location.replace('/login');
+  }
+
+  async function loadSession() {
+    try {
+      const session = await api('/api/auth/me');
+      if (!session || !session.authenticated || !session.user) {
+        redirectToLogin();
+        return false;
+      }
+      state.user = session.user;
+      renderAccount();
+      return true;
+    } catch (error) {
+      if (error && error.status === 401) redirectToLogin();
+      else toast(error && error.message ? error.message : t('network_error'), true);
+      return false;
+    }
+  }
+
+  // --- View switching ------------------------------------------------------
+
+  function setView(view, options) {
+    const next = ['chat', 'module'].includes(view) ? view : 'dashboard';
+    const settings = options || {};
+    if (next !== 'module' && state.activeModule) {
+      state.activeModule = null;
+      state.records = { loading: false, error: null, search: '', top: 25, skip: 0, data: null };
+      dom.moduleBrowser.hidden = true;
+      if (window.location.pathname.startsWith('/modules/')) window.history.replaceState({}, '', '/');
+    }
+    state.view = next;
+    dom.dashboardView.hidden = next !== 'dashboard';
+    dom.moduleView.hidden = next !== 'module';
+    dom.chatView.hidden = next !== 'chat';
+    dom.conversationSection.hidden = next !== 'chat';
+    dom.dashboardNav.classList.toggle('active', next === 'dashboard');
+    dom.chatNav.classList.toggle('active', next === 'chat');
+    if (next === 'dashboard') dom.dashboardNav.setAttribute('aria-current', 'page');
+    else dom.dashboardNav.removeAttribute('aria-current');
+    if (next === 'chat') dom.chatNav.setAttribute('aria-current', 'page');
+    else dom.chatNav.removeAttribute('aria-current');
+    updateViewChrome();
+    if (!settings.silent) closeSidebar();
+    if (next === 'dashboard') {
+      if (!settings.skipLoad) void ensureDashboard();
+    } else if (next === 'chat') {
+      if (!state.conversationsLoaded) void bootstrapConversations();
+      if (!settings.skipFocus) {
+        window.requestAnimationFrame(() => dom.input.focus());
+      }
+    }
+  }
+
+  // --- Dashboard -----------------------------------------------------------
+
+  function localizedText(value) {
+    if (!value || typeof value !== 'object') return '';
+    return state.lang === 'ar' ? value.ar || value.en || '' : value.en || value.ar || '';
+  }
+
+  function humanizeField(value) {
+    const text = String(value || '');
+    const spaced = text.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ');
+    return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+  }
+
+  function categoryKey(category) {
+    return `category_${category || 'organization'}`;
+  }
+
+  function formatCount(value) {
+    return typeof value === 'number' && Number.isFinite(value) ? numberFormat(value) : '—';
+  }
+
+  function moduleSummary(id) {
+    const overview = state.dashboard.overview;
+    if (overview && Array.isArray(overview.modules)) {
+      const found = overview.modules.find((module) => module.id === id);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  function moduleDefinition(id) {
+    const catalog = state.dashboard.modules;
+    if (catalog && Array.isArray(catalog.modules)) {
+      return catalog.modules.find((module) => module.id === id) || null;
+    }
+    return null;
+  }
+
+  function updateDashboardChrome() {
+    const dashboard = state.dashboard;
+    dom.refreshDashboard.disabled = dashboard.loading;
+    dom.refreshDashboard.setAttribute('aria-busy', dashboard.loading ? 'true' : 'false');
+    const refreshLabel = dom.refreshDashboard.querySelector('[data-i18n="refresh"]');
+    if (refreshLabel) refreshLabel.textContent = t(dashboard.loading ? 'refreshing' : 'refresh');
+
+    if (dashboard.refreshedAt) {
+      dom.dashboardUpdated.textContent = t('dashboard_updated', {
+        when: formatDateTime(dashboard.refreshedAt),
+      });
+    } else {
+      dom.dashboardUpdated.textContent = dashboard.loading ? t('dashboard_loading') : '';
+    }
+
+    const overview = dashboard.overview;
+    if (overview) {
+      dom.modulesStatus.textContent = t('modules_available', {
+        available: numberFormat(overview.availableModules ?? 0),
+        total: numberFormat(overview.totalModules ?? 0),
+      });
+    } else {
+      dom.modulesStatus.textContent = dashboard.loading ? t('dashboard_loading') : '';
+    }
+
+    const analysis = dashboard.analysis;
+    if (analysis && Array.isArray(analysis.breakdowns)) {
+      const live = analysis.breakdowns.filter((item) => item.status === 'ok').length;
+      dom.analysisStatus.textContent = `${numberFormat(live)} / ${numberFormat(analysis.breakdowns.length)}`;
+    } else {
+      dom.analysisStatus.textContent = '';
+    }
+  }
+
+  function renderDashboard() {
+    updateDashboardChrome();
+    renderKpis();
+    renderDecision();
+    renderAnalysis();
+    renderModules();
+    if (state.activeModule) renderModuleBrowser();
+  }
+
+  function dashboardNote(message, isError) {
+    const note = document.createElement('p');
+    note.className = `dashboard-empty${isError ? ' error' : ''}`;
+    note.textContent = message;
+    return note;
+  }
+
+  function renderKpis() {
+    dom.kpiGrid.replaceChildren();
+    const overview = state.dashboard.overview;
+    if (!overview || !Array.isArray(overview.modules) || overview.modules.length === 0) {
+      const message = state.dashboard.loading
+        ? t('dashboard_loading')
+        : state.dashboard.error || t('kpi_empty');
+      dom.kpiGrid.append(dashboardNote(message, Boolean(state.dashboard.error)));
+      return;
+    }
+
+    let featured = overview.modules.filter((module) => module.featured);
+    if (featured.length === 0) featured = overview.modules.slice(0, 6);
+
+    for (const module of featured) {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = `kpi-card${module.status === 'ok' ? '' : ' unavailable'}`;
+      card.addEventListener('click', () => openModule(module.id));
+      if (module.status !== 'ok' && module.error) card.title = module.error;
+
+      const label = document.createElement('span');
+      label.className = 'kpi-label';
+      label.textContent = localizedText(module.title);
+
+      const value = document.createElement('strong');
+      value.className = 'kpi-value';
+      value.textContent = module.status === 'ok' ? formatCount(module.count) : '—';
+
+      const meta = document.createElement('span');
+      meta.className = 'kpi-meta';
+      meta.textContent =
+        module.status === 'ok'
+          ? `${t(categoryKey(module.category))} · ${module.entitySet}`
+          : `${t('kpi_unavailable')} · ${module.entitySet}`;
+
+      card.append(label, value, meta);
+      dom.kpiGrid.append(card);
+    }
+  }
+
+  function renderAnalysis() {
+    dom.analysisGrid.replaceChildren();
+    const analysis = state.dashboard.analysis;
+    if (!analysis || !Array.isArray(analysis.breakdowns) || analysis.breakdowns.length === 0) {
+      const message = state.dashboard.loading
+        ? t('dashboard_loading')
+        : state.dashboard.error || t('analysis_unavailable');
+      dom.analysisGrid.append(dashboardNote(message, Boolean(state.dashboard.error)));
+      return;
+    }
+    // Decision-section cards render into #decision-grid instead.
+    for (const breakdown of analysis.breakdowns) {
+      if (breakdown.section === 'decision') continue;
+      dom.analysisGrid.append(renderBreakdownCard(breakdown));
+    }
+  }
+
+  const CHART_COLORS = ['#ff5659', '#a8c26e', '#2a9d8f', '#e9c46a', '#5b8e7d', '#4ea8de', '#9d7ea8'];
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+
+  function groupShare(groups, group) {
+    if (typeof group.share === 'number' && Number.isFinite(group.share)) return group.share;
+    const total = groups.reduce((sum, item) => sum + (Number(item.count) || 0), 0);
+    return total > 0 ? (Number(group.count) || 0) / total : 0;
+  }
+
+  function displayGroupKey(key) {
+    const text = key === null || key === undefined ? '' : String(key).trim();
+    return text === '' || text === '(blank)' ? '—' : text;
+  }
+
+  function formatShare(share) {
+    const pct = Math.round((Number(share) || 0) * 1000) / 10;
+    return Number.isInteger(pct) ? `${pct}%` : `${pct.toFixed(1)}%`;
+  }
+
+  // --- Interactive chart layer --------------------------------------------
+  // One shared floating tooltip used by every chart element.
+  const chartTooltip = document.createElement('div');
+  chartTooltip.className = 'chart-tooltip';
+  chartTooltip.setAttribute('role', 'tooltip');
+  chartTooltip.hidden = true;
+  document.body.append(chartTooltip);
+
+  function formatValue(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return String(value ?? '');
+    return new Intl.NumberFormat(state.lang === 'ar' ? 'ar' : 'en', {
+      maximumFractionDigits: 2,
+    }).format(number);
+  }
+
+  function tooltipHtml(groups, group) {
+    const valueTotal = groups.reduce(
+      (sum, item) =>
+        sum + (typeof item.value === 'number' && Number.isFinite(item.value) ? item.value : 0),
+      0,
+    );
+    const parts = [
+      `<strong>${escapeHtml(displayGroupKey(group.key))}</strong>`,
+      `${escapeHtml(formatCount(group.count))} · ${escapeHtml(formatShare(groupShare(groups, group)))}`,
+    ];
+    if (valueTotal > 0 && typeof group.value === 'number' && Number.isFinite(group.value)) {
+      parts.push(escapeHtml(formatValue(group.value)));
+    }
+    return parts.join('<br>');
+  }
+
+  function showChartTooltip(event, html) {
+    chartTooltip.innerHTML = html;
+    chartTooltip.hidden = false;
+    moveChartTooltip(event);
+  }
+
+  function moveChartTooltip(event) {
+    if (chartTooltip.hidden) return;
+    const pad = 14;
+    const rect = chartTooltip.getBoundingClientRect();
+    let left = event.clientX + pad;
+    let top = event.clientY + pad;
+    if (left + rect.width > window.innerWidth - 8) left = event.clientX - rect.width - pad;
+    if (top + rect.height > window.innerHeight - 8) top = event.clientY - rect.height - pad;
+    chartTooltip.style.left = `${Math.max(8, left)}px`;
+    chartTooltip.style.top = `${Math.max(8, top)}px`;
+  }
+
+  function hideChartTooltip() {
+    chartTooltip.hidden = true;
+  }
+
+  function sortGroups(groups, mode) {
+    const copy = groups.slice();
+    if (mode === 'name') {
+      copy.sort((a, b) => displayGroupKey(a.key).localeCompare(displayGroupKey(b.key)));
+    } else if (mode === 'value') {
+      copy.sort((a, b) => (Number(b.value) || 0) - (Number(a.value) || 0));
+    } else {
+      copy.sort((a, b) => (Number(b.count) || 0) - (Number(a.count) || 0));
+    }
+    return copy;
+  }
+
+  /**
+   * Wires hover tooltip, selection, drill-down and keyboard access onto one
+   * chart element. Click behaviour comes from opts.onSelect (drill or toggle).
+   */
+  function bindGroupElement(element, groups, group, opts) {
+    const options = opts || {};
+    element.classList.toggle('selected', options.selectedKey === group.key);
+    element.addEventListener('pointerenter', (event) => {
+      showChartTooltip(event, tooltipHtml(groups, group));
+      if (options.onHover) options.onHover(group, true);
+    });
+    element.addEventListener('pointermove', moveChartTooltip);
+    element.addEventListener('pointerleave', () => {
+      hideChartTooltip();
+      if (options.onHover) options.onHover(group, false);
+    });
+    element.addEventListener('blur', hideChartTooltip);
+    if (!options.onSelect) return;
+    element.addEventListener('click', () => options.onSelect(group));
+    element.tabIndex = 0;
+    element.setAttribute('role', 'button');
+    element.setAttribute('aria-label', `${displayGroupKey(group.key)}: ${formatCount(group.count)}`);
+    element.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        options.onSelect(group);
+      }
+    });
+  }
+
+  function buildBarChart(groups, opts) {
+    const list = document.createElement('ul');
+    list.className = 'bar-list';
+    // Scale bars by the value aggregate when it carries a positive total
+    // (e.g. returned order value per reason), otherwise by count.
+    const valueTotal = groups.reduce(
+      (sum, group) =>
+        sum + (typeof group.value === 'number' && Number.isFinite(group.value) ? group.value : 0),
+      0,
+    );
+    const useValue = valueTotal > 0;
+    const metric = (group) =>
+      useValue ? Number(group.value) || 0 : Number(group.count) || 0;
+    const max = Math.max(...groups.map(metric), 1);
+    for (const group of groups) {
+      const item = document.createElement('li');
+      item.className = 'bar-row';
+
+      const label = document.createElement('span');
+      label.className = 'bar-label';
+      label.textContent = displayGroupKey(group.key);
+      label.title = displayGroupKey(group.key);
+
+      const track = document.createElement('span');
+      track.className = 'bar-track';
+      const fill = document.createElement('span');
+      fill.className = 'bar-fill';
+      fill.style.width = `${Math.max(2, Math.round((metric(group) / max) * 100))}%`;
+      track.append(fill);
+
+      const count = document.createElement('span');
+      count.className = 'bar-count';
+      count.textContent = useValue
+        ? `${formatValue(group.value)} · ${formatShare(groupShare(groups, group))}`
+        : `${formatCount(group.count)} · ${formatShare(groupShare(groups, group))}`;
+
+      item.append(label, track, count);
+      bindGroupElement(item, groups, group, opts);
+      list.append(item);
+    }
+    return list;
+  }
+
+  function buildDonutChart(groups, opts) {
+    const wrap = document.createElement('div');
+    wrap.className = 'donut-wrap';
+
+    const size = 120;
+    const radius = 42;
+    const circumference = 2 * Math.PI * radius;
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('viewBox', `0 0 ${size} ${size}`);
+    svg.setAttribute('class', 'donut-svg');
+    svg.setAttribute('role', 'img');
+    svg.setAttribute(
+      'aria-label',
+      groups.map((group) => `${displayGroupKey(group.key)} ${formatShare(groupShare(groups, group))}`).join(', '),
+    );
+
+    const segments = [];
+    const legendEntries = [];
+
+    // Hovering either the ring or the legend highlights both.
+    const highlight = (key, on) => {
+      for (const entry of [...segments, ...legendEntries]) {
+        entry.element.classList.toggle('hot', Boolean(on) && entry.key === key);
+      }
+    };
+
+    let start = 0;
+    groups.forEach((group, index) => {
+      const share = groupShare(groups, group);
+      if (share <= 0) return;
+      const length = share * circumference;
+      const circle = document.createElementNS(SVG_NS, 'circle');
+      circle.setAttribute('cx', size / 2);
+      circle.setAttribute('cy', size / 2);
+      circle.setAttribute('r', radius);
+      circle.setAttribute('fill', 'none');
+      circle.setAttribute('stroke-width', 20);
+      circle.setAttribute('stroke-dasharray', `${length} ${Math.max(circumference - length, 0)}`);
+      circle.setAttribute('stroke-dashoffset', -start);
+      circle.setAttribute('transform', `rotate(-90 ${size / 2} ${size / 2})`);
+      circle.setAttribute('class', `donut-seg seg-${index % CHART_COLORS.length}`);
+      svg.append(circle);
+      segments.push({ key: group.key, element: circle });
+      bindGroupElement(circle, groups, group, {
+        ...(opts || {}),
+        onHover: (hovered, on) => highlight(hovered.key, on),
+      });
+      start += length;
+    });
+
+    const total = groups.reduce((sum, group) => sum + (Number(group.count) || 0), 0);
+    const totalText = document.createElementNS(SVG_NS, 'text');
+    totalText.setAttribute('x', size / 2);
+    totalText.setAttribute('y', size / 2 + 1);
+    totalText.setAttribute('text-anchor', 'middle');
+    totalText.setAttribute('class', 'donut-total');
+    totalText.textContent = formatCount(total);
+    svg.append(totalText);
+    wrap.append(svg);
+
+    const legend = document.createElement('ul');
+    legend.className = 'donut-legend';
+    groups.forEach((group, index) => {
+      const row = document.createElement('li');
+      row.className = 'legend-row';
+      const dot = document.createElement('span');
+      dot.className = `seg-dot seg-${index % CHART_COLORS.length}`;
+      const key = document.createElement('span');
+      key.className = 'legend-key';
+      key.textContent = displayGroupKey(group.key);
+      key.title = displayGroupKey(group.key);
+      const count = document.createElement('strong');
+      count.className = 'legend-count';
+      count.textContent = formatCount(group.count);
+      const pct = document.createElement('span');
+      pct.className = 'legend-pct';
+      pct.textContent = formatShare(groupShare(groups, group));
+      row.append(dot, key, count, pct);
+      legend.append(row);
+      legendEntries.push({ key: group.key, element: row });
+      bindGroupElement(row, groups, group, {
+        ...(opts || {}),
+        onHover: (hovered, on) => highlight(hovered.key, on),
+      });
+    });
+    wrap.append(legend);
+    return wrap;
+  }
+
+  function buildColumnChart(groups, opts) {
+    const chart = document.createElement('div');
+    chart.className = 'col-chart';
+    chart.setAttribute('role', 'img');
+    chart.setAttribute(
+      'aria-label',
+      groups.map((group) => `${displayGroupKey(group.key)} ${formatCount(group.count)}`).join(', '),
+    );
+    const valueTotal = groups.reduce(
+      (sum, group) =>
+        sum + (typeof group.value === 'number' && Number.isFinite(group.value) ? group.value : 0),
+      0,
+    );
+    const useValue = valueTotal > 0;
+    const metric = (group) => (useValue ? Number(group.value) || 0 : Number(group.count) || 0);
+    const max = Math.max(...groups.map(metric), 1);
+    groups.forEach((group, index) => {
+      const column = document.createElement('div');
+      column.className = 'col';
+      column.title = `${displayGroupKey(group.key)}: ${formatCount(group.count)} (${formatShare(groupShare(groups, group))})`;
+
+      const value = document.createElement('span');
+      value.className = 'col-value';
+      value.textContent = useValue
+        ? formatValue(group.value)
+        : formatCount(group.count);
+
+      const lane = document.createElement('span');
+      lane.className = 'col-lane';
+      const fill = document.createElement('span');
+      fill.className = `col-fill seg-bg-${index % CHART_COLORS.length}`;
+      fill.style.height = `${Math.max(4, Math.round((metric(group) / max) * 100))}%`;
+      lane.append(fill);
+
+      const key = document.createElement('span');
+      key.className = 'col-key';
+      key.textContent = displayGroupKey(group.key);
+      key.title = displayGroupKey(group.key);
+
+      column.append(value, lane, key);
+      bindGroupElement(column, groups, group, opts);
+      chart.append(column);
+    });
+    return chart;
+  }
+
+  function renderBreakdownCard(breakdown) {
+    const card = document.createElement('article');
+    card.className = `analysis-card${breakdown.section === 'decision' ? ' decision-card' : ''}`;
+
+    // Per-card interaction state: sort mode, selected group, drill-down.
+    const view = { sort: 'count', selectedKey: null, drill: null };
+
+    const head = document.createElement('header');
+    head.className = 'analysis-head';
+    const title = document.createElement('h3');
+    title.textContent = localizedText(breakdown.title);
+    const tags = document.createElement('span');
+    tags.className = 'analysis-tags';
+    const chartTag = document.createElement('span');
+    chartTag.className = 'chart-tag';
+    chartTag.textContent = t(`chart_${breakdown.chart || 'bar'}`);
+    const entity = document.createElement('span');
+    entity.className = 'entity-tag';
+    entity.textContent = breakdown.entitySet;
+    tags.append(chartTag, entity);
+    head.append(title, tags);
+
+    const controls = document.createElement('div');
+    const body = document.createElement('div');
+    body.className = 'analysis-body';
+    const foot = document.createElement('footer');
+    foot.className = 'analysis-foot';
+    card.append(head, controls, body, foot);
+
+    const refresh = () => {
+      renderChartControls(controls, breakdown, view, refresh);
+      renderCardBody(body, breakdown, view, refresh);
+      renderCardFoot(foot, breakdown, view);
+    };
+    refresh();
+    return card;
+  }
+
+  function renderChartControls(container, breakdown, view, refresh) {
+    container.replaceChildren();
+    container.className = 'chart-controls';
+    if (breakdown.status !== 'ok') return;
+    const groups = Array.isArray(breakdown.groups) ? breakdown.groups : [];
+    if (groups.length === 0) return;
+
+    const valueTotal = groups.reduce(
+      (sum, group) =>
+        sum + (typeof group.value === 'number' && Number.isFinite(group.value) ? group.value : 0),
+      0,
+    );
+    const hasValue = valueTotal > 0;
+    const options = [
+      { id: 'count', label: t('chart_sort_top') },
+      ...(hasValue ? [{ id: 'value', label: t('chart_sort_value') }] : []),
+      { id: 'name', label: t('chart_sort_name') },
+    ];
+    const cluster = document.createElement('div');
+    cluster.className = 'chart-sort';
+    for (const option of options) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `chart-btn${view.sort === option.id ? ' active' : ''}`;
+      button.textContent = option.label;
+      button.setAttribute('aria-pressed', String(view.sort === option.id));
+      button.addEventListener('click', () => {
+        view.sort = option.id;
+        refresh();
+      });
+      cluster.append(button);
+    }
+    container.append(cluster);
+
+    if (breakdown.drillGroupByField) {
+      const hint = document.createElement('span');
+      hint.className = 'chart-hint';
+      hint.textContent = t('chart_drill_hint');
+      container.append(hint);
+    }
+  }
+
+  function renderCardBody(body, breakdown, view, refresh) {
+    body.replaceChildren();
+    if (breakdown.status !== 'ok') {
+      body.append(dashboardNote(breakdown.error || t('analysis_unavailable'), true));
+      return;
+    }
+    const groups = Array.isArray(breakdown.groups) ? breakdown.groups : [];
+    if (groups.length === 0) {
+      body.append(dashboardNote(t('module_no_records'), false));
+      return;
+    }
+    if (view.drill) {
+      body.append(buildDrillPanel(breakdown, view, refresh));
+      return;
+    }
+
+    const sorted = sortGroups(groups, view.sort);
+    const opts = {
+      selectedKey: view.selectedKey,
+      onSelect: (group) => {
+        if (breakdown.drillGroupByField) {
+          void loadDrill(breakdown, group, view, refresh);
+        } else {
+          view.selectedKey = view.selectedKey === group.key ? null : group.key;
+          refresh();
+        }
+      },
+    };
+    if (breakdown.chart === 'donut') body.append(buildDonutChart(sorted, opts));
+    else if (breakdown.chart === 'column') body.append(buildColumnChart(sorted, opts));
+    else body.append(buildBarChart(sorted, opts));
+  }
+
+  function renderCardFoot(foot, breakdown, view) {
+    foot.replaceChildren();
+    if (breakdown.status !== 'ok') return;
+    const groups = Array.isArray(breakdown.groups) ? breakdown.groups : [];
+
+    if (groups.length > 0) {
+      const top = groups.reduce((best, group) =>
+        (Number(group.count) || 0) > (Number(best.count) || 0) ? group : best,
+      );
+      const topShare = document.createElement('span');
+      topShare.textContent = t('analysis_top_share', {
+        key: displayGroupKey(top.key),
+        pct: formatShare(groupShare(groups, top)).replace('%', ''),
+      });
+      foot.append(topShare);
+    }
+
+    const groupCount = document.createElement('span');
+    groupCount.textContent = t('analysis_groups', {
+      n: formatCount(breakdown.groupCount ?? groups.length),
+    });
+    foot.append(groupCount);
+    if (typeof breakdown.recordsScanned === 'number') {
+      const scanned = document.createElement('span');
+      scanned.textContent = t('analysis_scanned', {
+        n: formatCount(breakdown.recordsScanned),
+      });
+      foot.append(scanned);
+    }
+    if (breakdown.complete === false) {
+      const badge = document.createElement('span');
+      badge.className = 'badge partial';
+      badge.textContent = t('analysis_partial');
+      foot.append(badge);
+    }
+    if (view.selectedKey) {
+      const selected = groups.find((group) => group.key === view.selectedKey);
+      if (selected) {
+        const badge = document.createElement('span');
+        badge.className = 'badge selected';
+        badge.textContent = t('analysis_selected', {
+          key: displayGroupKey(selected.key),
+          n: formatCount(selected.count),
+          pct: formatShare(groupShare(groups, selected)).replace('%', ''),
+        });
+        foot.append(badge);
+      }
+    }
+  }
+
+  async function loadDrill(breakdown, group, view, refresh) {
+    view.drill = { key: group.key, loading: true, error: null, data: null };
+    refresh();
+    try {
+      const data = await api(
+        `/api/dashboard/analysis/${encodeURIComponent(breakdown.id)}/drilldown?key=${encodeURIComponent(group.key)}`,
+      );
+      view.drill = { key: group.key, loading: false, error: null, data };
+    } catch (error) {
+      view.drill = {
+        key: group.key,
+        loading: false,
+        error: (error && error.message) || t('request_failed'),
+        data: null,
+      };
+    }
+    refresh();
+  }
+
+  function buildDrillPanel(breakdown, view, refresh) {
+    const panel = document.createElement('div');
+    panel.className = 'drill-panel';
+
+    const head = document.createElement('div');
+    head.className = 'drill-head';
+    const back = document.createElement('button');
+    back.type = 'button';
+    back.className = 'chip-btn drill-back';
+    back.textContent = `← ${t('chart_drill_back')}`;
+    back.addEventListener('click', () => {
+      view.drill = null;
+      refresh();
+    });
+    const label = document.createElement('span');
+    label.className = 'drill-label';
+    label.textContent = t('chart_drill_of', { key: displayGroupKey(view.drill.key) });
+    head.append(back, label);
+    panel.append(head);
+
+    const drill = view.drill;
+    if (drill.loading) {
+      panel.append(dashboardNote(t('chart_drill_loading'), false));
+      return panel;
+    }
+    if (drill.error) {
+      panel.append(dashboardNote(drill.error, true));
+      return panel;
+    }
+    const data = drill.data;
+    const groups = data && Array.isArray(data.groups) ? data.groups : [];
+    if (groups.length === 0) {
+      panel.append(dashboardNote(t('module_no_records'), false));
+      return panel;
+    }
+    const sub = document.createElement('p');
+    sub.className = 'drill-sub';
+    sub.textContent = t('chart_drill_by', { field: data.groupByField || '' });
+    panel.append(sub);
+    panel.append(buildBarChart(sortGroups(groups, 'count'), {}));
+    return panel;
+  }
+
+  // --- Decision support: sales vs returns ----------------------------------
+
+  function renderDecision() {
+    dom.decisionGrid.replaceChildren();
+    const analysis = state.dashboard.analysis;
+    if (!analysis) return;
+    if (analysis.salesVsReturns) {
+      dom.decisionGrid.append(renderRatioCard(analysis.salesVsReturns));
+    }
+    const breakdowns = Array.isArray(analysis.breakdowns) ? analysis.breakdowns : [];
+    for (const breakdown of breakdowns) {
+      if (breakdown.section === 'decision') {
+        dom.decisionGrid.append(renderBreakdownCard(breakdown));
+      }
+    }
+  }
+
+  function renderRatioCard(metric) {
+    const card = document.createElement('article');
+    card.className = 'analysis-card ratio-card';
+
+    const head = document.createElement('header');
+    head.className = 'analysis-head';
+    const title = document.createElement('h3');
+    title.textContent = t('decision_ratio_title');
+    const tags = document.createElement('span');
+    tags.className = 'analysis-tags';
+    const salesTag = document.createElement('span');
+    salesTag.className = 'entity-tag';
+    salesTag.textContent = metric.salesEntitySet;
+    const returnTag = document.createElement('span');
+    returnTag.className = 'entity-tag';
+    returnTag.textContent = metric.returnEntitySet;
+    tags.append(salesTag, returnTag);
+    const partial = !metric.salesComplete || !metric.returnsComplete;
+    if (partial && metric.status !== 'unavailable') {
+      const badge = document.createElement('span');
+      badge.className = 'badge partial';
+      badge.textContent = t('analysis_partial');
+      tags.append(badge);
+    }
+    head.append(title, tags);
+
+    if (metric.status === 'unavailable') {
+      card.append(head);
+      card.append(dashboardNote(metric.error || t('decision_insight_unknown'), true));
+      return card;
+    }
+
+    const rate =
+      typeof metric.returnRate === 'number' && Number.isFinite(metric.returnRate)
+        ? metric.returnRate
+        : null;
+    const salesCount =
+      typeof metric.salesCount === 'number' && Number.isFinite(metric.salesCount)
+        ? metric.salesCount
+        : null;
+    const returnCount =
+      typeof metric.returnCount === 'number' && Number.isFinite(metric.returnCount)
+        ? metric.returnCount
+        : null;
+
+    const body = document.createElement('div');
+    body.className = 'ratio-body';
+
+    const value = document.createElement('div');
+    value.className = 'ratio-value';
+    value.textContent = rate === null ? '—' : `${(rate * 100).toFixed(1)}%`;
+
+    const caption = document.createElement('p');
+    caption.className = 'ratio-caption';
+    caption.textContent = t('decision_ratio_caption', {
+      returns: formatCount(returnCount),
+      sales: formatCount(salesCount),
+    });
+
+    // Proportional bar: returns segment width = return rate.
+    const bar = document.createElement('div');
+    bar.className = 'ratio-bar';
+    bar.setAttribute('role', 'img');
+    const returnPct = rate === null ? 0 : Math.min(99.5, Math.max(0.5, rate * 100));
+    const salesSeg = document.createElement('span');
+    salesSeg.className = 'ratio-seg sales';
+    salesSeg.style.width = `${(100 - returnPct).toFixed(2)}%`;
+    salesSeg.textContent = formatCount(salesCount);
+    const returnsSeg = document.createElement('span');
+    returnsSeg.className = 'ratio-seg returns';
+    returnsSeg.style.width = `${returnPct.toFixed(2)}%`;
+    returnsSeg.textContent = returnPct >= 8 ? formatCount(returnCount) : '';
+    bar.append(salesSeg, returnsSeg);
+    bar.setAttribute(
+      'aria-label',
+      `${t('decision_sales_label')}: ${formatCount(salesCount)}, ${t('decision_returns_label')}: ${formatCount(returnCount)}`,
+    );
+
+    const legend = document.createElement('div');
+    legend.className = 'ratio-legend';
+    const legendItem = (label, count, className) => {
+      const item = document.createElement('span');
+      item.className = 'ratio-legend-item';
+      const dot = document.createElement('span');
+      dot.className = `ratio-dot ${className}`;
+      const text = document.createElement('span');
+      text.textContent = `${label}: ${formatCount(count)}`;
+      item.append(dot, text);
+      return item;
+    };
+    legend.append(
+      legendItem(t('decision_sales_label'), salesCount, 'sales'),
+      legendItem(t('decision_returns_label'), returnCount, 'returns'),
+    );
+
+    const actions = document.createElement('div');
+    actions.className = 'ratio-actions';
+    const salesBtn = document.createElement('button');
+    salesBtn.type = 'button';
+    salesBtn.className = 'chip-btn';
+    salesBtn.textContent = t('decision_view_sales');
+    salesBtn.addEventListener('click', () => openModule('sales-orders'));
+    const returnsBtn = document.createElement('button');
+    returnsBtn.type = 'button';
+    returnsBtn.className = 'chip-btn';
+    returnsBtn.textContent = t('decision_view_returns');
+    returnsBtn.addEventListener('click', () => openModule('return-orders'));
+    actions.append(salesBtn, returnsBtn);
+
+    const insight = document.createElement('p');
+    insight.className = 'ratio-insight';
+    if (rate === null) {
+      insight.textContent = t('decision_insight_unknown');
+      insight.classList.add('unknown');
+    } else if (rate > 0.05) {
+      insight.textContent = t('decision_insight_high');
+      insight.classList.add('high');
+    } else if (rate > 0.02) {
+      insight.textContent = t('decision_insight_watch');
+      insight.classList.add('watch');
+    } else {
+      insight.textContent = t('decision_insight_low');
+      insight.classList.add('low');
+    }
+
+    body.append(value, caption, bar, legend, actions, insight);
+    card.append(head, body);
+    return card;
+  }
+
+  function renderModules() {
+    dom.moduleGrid.replaceChildren();
+    const overview = state.dashboard.overview;
+    let modules = overview && Array.isArray(overview.modules) ? overview.modules : [];
+    if (
+      modules.length === 0 &&
+      state.dashboard.modules &&
+      Array.isArray(state.dashboard.modules.modules)
+    ) {
+      modules = state.dashboard.modules.modules.map((module) => ({
+        id: module.id,
+        entitySet: module.entitySet,
+        title: module.title,
+        description: module.description,
+        category: module.category,
+        featured: module.featured === true,
+        count: null,
+        status: 'unavailable',
+      }));
+    }
+
+    if (modules.length === 0) {
+      const message = state.dashboard.loading
+        ? t('dashboard_loading')
+        : state.dashboard.error || t('kpi_empty');
+      dom.moduleGrid.append(dashboardNote(message, Boolean(state.dashboard.error)));
+      return;
+    }
+
+    for (const module of modules) {
+      const card = document.createElement('article');
+      card.className = 'module-card';
+      if (state.activeModule === module.id) card.classList.add('active');
+
+      const top = document.createElement('div');
+      top.className = 'module-card-top';
+      const category = document.createElement('span');
+      category.className = 'module-category';
+      category.textContent = t(categoryKey(module.category));
+      const stateBadge = document.createElement('span');
+      stateBadge.className = `module-state ${module.status === 'ok' ? 'ok' : 'warn'}`;
+      stateBadge.textContent = t(
+        module.status === 'ok' ? 'module_state_ok' : 'module_state_unavailable',
+      );
+      top.append(category, stateBadge);
+
+      const title = document.createElement('h3');
+      title.textContent = localizedText(module.title);
+      const description = document.createElement('p');
+      description.textContent = localizedText(module.description);
+
+      const foot = document.createElement('div');
+      foot.className = 'module-card-foot';
+      const metric = document.createElement('span');
+      metric.className = 'module-metric';
+      if (module.status === 'ok') {
+        const strong = document.createElement('strong');
+        strong.textContent = formatCount(module.count);
+        const suffix = document.createElement('span');
+        suffix.textContent = ` ${t('module_records_unknown').toLowerCase()}`;
+        metric.append(strong, suffix);
+      } else {
+        metric.textContent = t('module_total_unknown');
+      }
+      const open = document.createElement('button');
+      open.type = 'button';
+      open.className = 'module-open';
+      open.textContent = t('module_browse');
+      open.addEventListener('click', () => openModule(module.id));
+      foot.append(metric, open);
+
+      card.append(top, title, description, foot);
+      if (module.status !== 'ok' && module.error) card.title = module.error;
+      dom.moduleGrid.append(card);
+    }
+  }
+
+  async function ensureDashboard() {
+    if (state.dashboard.loaded || state.dashboard.loading) return;
+    await loadDashboard();
+  }
+
+  async function loadDashboard(options) {
+    if (state.dashboard.loading) return;
+    const force = Boolean(options && options.force);
+    state.dashboard.loading = true;
+    state.dashboard.error = null;
+    updateDashboardChrome();
+    renderDashboard();
+
+    try {
+      const results = await Promise.allSettled([
+        api(`/api/dashboard/overview${force ? '?refresh=true' : ''}`),
+        api('/api/dashboard/analysis'),
+        api('/api/dashboard/modules'),
+      ]);
+      const [overview, analysis, modules] = results;
+      if (overview.status === 'fulfilled') state.dashboard.overview = overview.value;
+      if (analysis.status === 'fulfilled') state.dashboard.analysis = analysis.value;
+      if (modules.status === 'fulfilled') state.dashboard.modules = modules.value;
+
+      const failures = results.filter((result) => result.status === 'rejected');
+      state.dashboard.loaded = results.some((result) => result.status === 'fulfilled');
+      if (failures.length > 0) {
+        const reason = failures[0].reason;
+        state.dashboard.error = reason && reason.message ? reason.message : t('request_failed');
+      }
+      state.dashboard.refreshedAt = new Date().toISOString();
+      if (force) toast(state.dashboard.error || t('dashboard_refreshed'), Boolean(state.dashboard.error));
+    } catch (error) {
+      state.dashboard.error = error && error.message ? error.message : t('request_failed');
+      toast(state.dashboard.error, true);
+    } finally {
+      state.dashboard.loading = false;
+      renderDashboard();
+      updateDashboardChrome();
+    }
+  }
+
+  // --- Module record browser ----------------------------------------------
+
+  function openModule(id) {
+    const summary = moduleSummary(id);
+    const definition = moduleDefinition(id);
+    if (!summary && !definition) return;
+    state.activeModule = id;
+    state.records = { loading: true, error: null, search: '', top: 25, skip: 0, data: null };
+    const modulePath = `/modules/${encodeURIComponent(id)}`;
+    if (window.location.pathname !== modulePath) window.history.pushState({ module: id }, '', modulePath);
+    setView('module', { silent: true });
+    dom.moduleBrowser.hidden = false;
+    renderDashboard();
+    void loadModuleRecords();
+  }
+
+  function closeModule() {
+    if (window.location.pathname.startsWith('/modules/')) window.history.replaceState({}, '', '/');
+    state.activeModule = null;
+    state.records = { loading: false, error: null, search: '', top: 25, skip: 0, data: null };
+    dom.moduleBrowser.hidden = true;
+    dom.moduleBrowserTitle.textContent = '';
+    dom.moduleBrowserDescription.textContent = '';
+    dom.moduleBrowserCategory.textContent = '';
+    dom.moduleBrowserCount.textContent = '';
+    dom.moduleTableWrap.replaceChildren();
+    dom.modulePageInfo.textContent = '';
+    setView('dashboard', { silent: true });
+    renderModules();
+  }
+
+  function renderModuleBrowser() {
+    if (!state.activeModule) return;
+    const summary = moduleSummary(state.activeModule);
+    const definition = moduleDefinition(state.activeModule);
+    const title = summary ? summary.title : definition ? definition.title : null;
+    const description = summary ? summary.description : definition ? definition.description : null;
+    const category = summary ? summary.category : definition ? definition.category : '';
+    const entitySet = summary ? summary.entitySet : definition ? definition.entitySet : '';
+
+    dom.moduleBrowser.hidden = false;
+    dom.moduleBrowserTitle.textContent = localizedText(title) || state.activeModule;
+    dom.moduleBrowserDescription.textContent = localizedText(description) || '';
+    dom.moduleBrowserCategory.textContent = category
+      ? `${t(categoryKey(category))} · ${entitySet}`
+      : entitySet;
+
+    const supportsSearch = Boolean(definition && definition.searchField);
+    dom.moduleSearch.hidden = !supportsSearch;
+    dom.moduleSearchInput.disabled = !supportsSearch || state.records.loading;
+    dom.moduleSearchBtn.disabled = !supportsSearch || state.records.loading;
+    dom.moduleSearchClear.disabled =
+      !supportsSearch || state.records.loading || !state.records.search;
+    if (!supportsSearch) dom.moduleSearchInput.value = '';
+    else if (document.activeElement !== dom.moduleSearchInput) {
+      dom.moduleSearchInput.value = state.records.search;
+    }
+
+    const data = state.records.data;
+    if (data && data.module) {
+      dom.moduleBrowserCount.textContent =
+        typeof data.total === 'number'
+          ? t('module_records', { n: formatCount(data.total) })
+          : t('module_records_unknown');
+    } else {
+      dom.moduleBrowserCount.textContent = '';
+    }
+
+    renderModuleTable();
+    renderModulePager();
+  }
+
+  function renderModuleTable() {
+    dom.moduleTableWrap.replaceChildren();
+    if (state.records.loading) {
+      dom.moduleTableWrap.append(dashboardNote(t('module_loading'), false));
+      return;
+    }
+    if (state.records.error) {
+      dom.moduleTableWrap.append(
+        dashboardNote(state.records.error || t('module_records_error'), true),
+      );
+      return;
+    }
+
+    const data = state.records.data;
+    if (!data || !Array.isArray(data.records) || data.records.length === 0) {
+      dom.moduleTableWrap.append(dashboardNote(t('module_no_records'), false));
+      return;
+    }
+
+    const columns =
+      Array.isArray(data.columns) && data.columns.length > 0
+        ? data.columns
+        : Object.keys(data.records[0] || {}).map((name) => ({ name, kind: 'unknown' }));
+
+    const wrap = document.createElement('div');
+    wrap.className = 'data-table-wrap module-table';
+    const table = document.createElement('table');
+    table.className = 'data-table';
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+    for (const column of columns) {
+      const th = document.createElement('th');
+      th.textContent = humanizeField(column.name);
+      th.title = column.name;
+      headRow.append(th);
+    }
+    thead.append(headRow);
+
+    const tbody = document.createElement('tbody');
+    for (const record of data.records) {
+      const tr = document.createElement('tr');
+      for (const column of columns) {
+        const td = document.createElement('td');
+        const value = record ? record[column.name] : null;
+        td.textContent = formatCell(value, column.kind);
+        if (column.kind === 'number') td.className = 'num';
+        tr.append(td);
+      }
+      tbody.append(tr);
+    }
+
+    table.append(thead, tbody);
+    wrap.append(table);
+    dom.moduleTableWrap.append(wrap);
+  }
+
+  function renderModulePager() {
+    const data = state.records.data;
+    const loading = state.records.loading;
+    const records = data && Array.isArray(data.records) ? data.records : [];
+    const skip = data && typeof data.skip === 'number' ? data.skip : state.records.skip;
+    const total = data && typeof data.total === 'number' ? data.total : null;
+    const from = records.length > 0 ? skip + 1 : 0;
+    const to = skip + records.length;
+
+    if (records.length === 0) {
+      dom.modulePageInfo.textContent = '';
+    } else if (total !== null) {
+      dom.modulePageInfo.textContent = t('page_info', {
+        from: formatCount(from),
+        to: formatCount(to),
+        total: formatCount(total),
+      });
+    } else {
+      dom.modulePageInfo.textContent = t('page_info_unknown', {
+        from: formatCount(from),
+        to: formatCount(to),
+      });
+    }
+
+    dom.modulePrev.disabled = loading || skip <= 0;
+    dom.moduleNext.disabled = loading || !(data && data.hasMore);
+  }
+
+  async function loadModuleRecords() {
+    if (!state.activeModule) return;
+    const moduleId = state.activeModule;
+    state.records.loading = true;
+    state.records.error = null;
+    renderModuleBrowser();
+
+    const params = new URLSearchParams();
+    params.set('top', String(state.records.top));
+    params.set('skip', String(state.records.skip));
+    if (state.records.search) params.set('search', state.records.search);
+
+    try {
+      const data = await api(
+        `/api/dashboard/modules/${encodeURIComponent(moduleId)}/records?${params.toString()}`,
+      );
+      if (state.activeModule !== moduleId) return;
+      state.records.data = data;
+      state.records.error = null;
+      if (typeof data.top === 'number') state.records.top = data.top;
+      if (typeof data.skip === 'number') state.records.skip = data.skip;
+    } catch (error) {
+      if (state.activeModule !== moduleId) return;
+      state.records.error = error && error.message ? error.message : t('module_records_error');
+      state.records.data = null;
+    } finally {
+      if (state.activeModule === moduleId) {
+        state.records.loading = false;
+        renderModuleBrowser();
+      }
+    }
+  }
+
+  function submitModuleSearch(event) {
+    event.preventDefault();
+    if (!state.activeModule || state.records.loading) return;
+    state.records.search = dom.moduleSearchInput.value.trim();
+    state.records.skip = 0;
+    void loadModuleRecords();
+  }
+
+  function clearModuleSearch() {
+    if (!state.activeModule || state.records.loading) return;
+    state.records.search = '';
+    state.records.skip = 0;
+    dom.moduleSearchInput.value = '';
+    void loadModuleRecords();
   }
 
   function renderSuggestions() {
@@ -660,6 +2173,7 @@
 
     if (!response.ok) {
       const error = (payload && payload.error) || {};
+      if (response.status === 401 && path !== '/api/auth/me') redirectToLogin();
       throw new ApiError(
         error.message || t('request_failed'),
         response.status,
@@ -670,16 +2184,72 @@
     return payload;
   }
 
+  function updateDashboardStatus() {
+    const setStatus = (label, dot, message, level) => {
+      if (!label || !dot) return;
+      label.textContent = message;
+      dot.classList.remove('ok', 'warn', 'error');
+      if (level) dot.classList.add(level);
+    };
+    const health = state.health;
+
+    if (!health) {
+      setStatus(dom.erpStatus, dom.erpStatusDot, t('status_checking'), '');
+      setStatus(dom.aiStatus, dom.aiStatusDot, t('status_checking'), '');
+      setStatus(dom.catalogStatus, dom.catalogStatusDot, t('status_checking'), '');
+      return;
+    }
+
+    const d365Ready = Boolean(health.d365 && health.d365.configured);
+    setStatus(
+      dom.erpStatus,
+      dom.erpStatusDot,
+      d365Ready ? t('status_configured') : t('status_setup'),
+      d365Ready ? 'ok' : 'error',
+    );
+
+    const ai = health.ai;
+    const aiAvailable =
+      Boolean(ai && ai.configured) &&
+      (!Array.isArray(ai.providers) ||
+        ai.providers.length === 0 ||
+        ai.providers.some((provider) => provider.available));
+    setStatus(
+      dom.aiStatus,
+      dom.aiStatusDot,
+      aiAvailable ? t('status_ready') : ai && ai.configured ? t('status_unavailable') : t('status_setup'),
+      aiAvailable ? 'ok' : 'error',
+    );
+
+    const metadata = health.metadata;
+    if (metadata && metadata.loaded) {
+      const count = metadata.queryableEntityCount ?? metadata.entityCount ?? 0;
+      const formattedCount = new Intl.NumberFormat(state.lang === 'ar' ? 'ar' : 'en').format(count);
+      setStatus(
+        dom.catalogStatus,
+        dom.catalogStatusDot,
+        t('catalog_entities', { n: formattedCount }),
+        metadata.stale ? 'warn' : 'ok',
+      );
+    } else {
+      setStatus(dom.catalogStatus, dom.catalogStatusDot, t('status_unavailable'), 'error');
+    }
+  }
+
   function updateMetaPill(metadata) {
+    updateDashboardStatus();
     dom.metadataPill.classList.remove('ok', 'warn', 'error');
     if (metadata && metadata.loaded) {
-      dom.metadataPill.classList.add(metadata.stale ? 'warn' : 'ok');
+      const status = metadata.stale ? 'warn' : 'ok';
+      dom.metadataPill.classList.add(status);
       dom.metadataText.textContent = metadata.stale
         ? t('metadata_stale')
         : t('metadata_ready', { n: metadata.queryableEntityCount ?? metadata.entityCount ?? 0 });
       dom.metadataPill.title = metadata.fetchedAt
         ? `${formatDateTime(metadata.fetchedAt)}${metadata.stale ? ' · stale' : ''}`
         : '';
+      dom.connectionIndicator.classList.remove('ok', 'warn', 'error');
+      dom.connectionIndicator.classList.add(status);
       return;
     }
     if (state.health && state.health.d365 && state.health.d365.configured === false) {
@@ -691,6 +2261,10 @@
     }
     dom.metadataPill.title =
       state.health && Array.isArray(state.health.warnings) ? state.health.warnings.join(' ') : '';
+    dom.connectionIndicator.classList.remove('ok', 'warn', 'error');
+    dom.connectionIndicator.classList.add(
+      dom.metadataPill.classList.contains('error') ? 'error' : 'warn',
+    );
   }
 
   function renderConversations() {
@@ -755,6 +2329,7 @@
     try {
       const data = await api('/api/conversations');
       state.conversations = Array.isArray(data && data.conversations) ? data.conversations : [];
+      state.conversationsLoaded = true;
       renderConversations();
       if (showToast) toast(t('conversations_refreshed'));
     } catch (error) {
@@ -767,6 +2342,7 @@
       toast(t('wait'));
       return;
     }
+    setView('chat', { silent: true, skipFocus: true });
     try {
       const data = await api(`/api/conversations/${encodeURIComponent(id)}`);
       state.current = data.conversation;
@@ -789,6 +2365,7 @@
       toast(t('wait'));
       return;
     }
+    setView('chat', { silent: true, skipFocus: true });
     state.current = null;
     dom.messages.replaceChildren();
     setEmptyVisible(true);
@@ -1361,7 +2938,12 @@
           payload = null;
         }
         const error = (payload && payload.error) || {};
-        throw new ApiError(error.message || t('request_failed'), response.status, error.code);
+        if (response.status === 401) redirectToLogin();
+        throw new ApiError(
+          response.status === 401 ? t('session_expired') : error.message || t('request_failed'),
+          response.status,
+          error.code,
+        );
       }
 
       await consumeSse(response, handleEvent);
@@ -1547,15 +3129,34 @@
     }
   }
 
-  async function bootstrapData() {
+  async function loadHealth() {
+    try {
+      const health = await api('/api/health');
+      state.health = health;
+      updateMetaPill(health.metadata);
+      updateDashboardStatus();
+      if (health.ai && health.ai.configured === false) {
+        toast(t('ai_not_configured'), true);
+      }
+      if (health.d365 && health.d365.configured === false) {
+        toast(t('d365_setup_required'), true);
+      }
+    } catch (error) {
+      toast(error.message, true);
+    }
+  }
+
+  async function bootstrapConversations() {
+    if (state.conversationsLoaded || state.conversationsLoading) return;
+    state.conversationsLoading = true;
     try {
       const data = await api('/api/conversations');
       state.conversations = Array.isArray(data && data.conversations) ? data.conversations : [];
+      state.conversationsLoaded = true;
       renderConversations();
-      if (state.conversations.length > 0 && !state.current) {
-        await loadConversation(state.conversations[0].id, { silent: true });
-      } else if (!state.current) {
-        newChat();
+      if (!state.current && state.view === 'chat') {
+        setEmptyVisible(true);
+        updateTitle();
       }
       try {
         const metadata = await api('/api/metadata/status');
@@ -1566,6 +3167,8 @@
       }
     } catch (error) {
       toast(error.message, true);
+    } finally {
+      state.conversationsLoading = false;
     }
   }
 
@@ -1585,6 +3188,14 @@
   }
 
   function bindEvents() {
+    window.addEventListener('popstate', () => {
+      const match = window.location.pathname.match(/^\/modules\/([^/]+)\/?$/);
+      if (match) {
+        try { openModule(decodeURIComponent(match[1])); } catch { setView('dashboard', { silent: true }); }
+      } else if (state.activeModule) {
+        closeModule();
+      }
+    });
     dom.composer.addEventListener('submit', (event) => {
       event.preventDefault();
       if (state.sending) return;
@@ -1604,9 +3215,35 @@
     });
 
     dom.newChat.addEventListener('click', newChat);
+    dom.dashboardNav.addEventListener('click', () => setView('dashboard'));
+    // chatNav and dashboardGoChat are hidden: dashboard is the only primary view
+    if (dom.chatNav && !dom.chatNav.hidden) dom.chatNav.addEventListener('click', () => setView('chat'));
+    if (dom.dashboardGoChat && !dom.dashboardGoChat.hidden) dom.dashboardGoChat.addEventListener('click', () => setView('chat'));
+    dom.refreshDashboard.addEventListener('click', () => {
+      void loadDashboard({ force: true });
+    });
     dom.menuToggle.addEventListener('click', openSidebar);
     dom.sidebarClose.addEventListener('click', closeSidebar);
     dom.sidebarBackdrop.addEventListener('click', closeSidebar);
+
+    dom.moduleBrowserClose.addEventListener('click', closeModule);
+    dom.moduleSearch.addEventListener('submit', submitModuleSearch);
+    dom.moduleSearchClear.addEventListener('click', clearModuleSearch);
+    dom.modulePrev.addEventListener('click', () => {
+      if (state.records.loading || state.records.skip <= 0) return;
+      state.records.skip = Math.max(0, state.records.skip - state.records.top);
+      void loadModuleRecords();
+    });
+    dom.moduleNext.addEventListener('click', () => {
+      if (state.records.loading) return;
+      const data = state.records.data;
+      if (!data || !data.hasMore) return;
+      state.records.skip += state.records.top;
+      void loadModuleRecords();
+    });
+    dom.logoutBtn.addEventListener('click', () => {
+      void logout();
+    });
 
     dom.refreshConversations.addEventListener('click', () => {
       void refreshConversations(true);
@@ -1644,6 +3281,7 @@
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
         if (state.modal) closeModal(false);
+        else if (state.view === 'module' && state.activeModule) closeModule();
         else closeSidebar();
       }
     });
@@ -1655,24 +3293,18 @@
     applyTheme();
     updateComposer();
     setEmptyVisible(true);
+    updateViewChrome();
 
     if (await redirectFromStaticPreview()) return;
+    if (!(await loadSession())) return;
 
-    try {
-      const health = await api('/api/health');
-      state.health = health;
-      updateMetaPill(health.metadata);
-      if (health.ai && health.ai.configured === false) {
-        toast(t('ai_not_configured'), true);
-      }
-      if (health.d365 && health.d365.configured === false) {
-        toast(t('d365_setup_required'), true);
-      }
-    } catch (error) {
-      toast(error.message, true);
+    await loadHealth();
+    await loadDashboard();
+    const moduleRoute = window.location.pathname.match(/^\/modules\/([^/]+)\/?$/);
+    if (moduleRoute) {
+      try { openModule(decodeURIComponent(moduleRoute[1])); } catch { setView('dashboard', { silent: true }); }
     }
-
-    await bootstrapData();
+    void bootstrapConversations();
   }
 
   void init();

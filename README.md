@@ -11,8 +11,8 @@ English-capable business assistant for Touch, the electrical home-appliance
 brand of El-Zenouki Group. It helps colleagues understand the Touch business
 through data in Microsoft Dynamics 365 Finance & Operations (F&O): it discovers
 the EntitySets and fields exposed by the configured D365 identity, validates
-every query against that metadata, and uses Groq tool calling to answer from
-retrieved ERP data.
+every query against that metadata, and uses a provider-independent AI service
+with ordered model failover to answer from retrieved ERP data.
 
 The identity follows Touch's official description: a home-appliance brand
 focused on product quality, customer satisfaction, contemporary trends, and
@@ -40,7 +40,7 @@ Browser (public/)
   └─ Express API (src/app.ts)
        ├─ Local-only access by default, optional trusted proxy user ID, rate limits
        ├─ ChatService + local JSON/memory conversation store
-       ├─ Agent ── provider-neutral AIProvider ── Groq Chat Completions
+       ├─ Agent ── provider-neutral AIProvider ── ordered OpenAI-compatible providers
        │    └─ registered local tools: metadata, validated queries, analytics
        └─ MetadataService / QueryBuilder / AnalyticsEngine
             └─ D365Client ── TokenProvider ── D365 OData
@@ -48,8 +48,9 @@ Browser (public/)
 
 Key modules:
 
-- `src/ai/`: provider interface, Groq adapter, system prompt, local tools,
-  bounded tool loop, and response attachments.
+- `src/ai/`: normalized OpenAI-compatible provider adapter, prioritized AI
+  service with health/cooldown telemetry, system prompt, local tools, bounded
+  tool loop, and response attachments.
 - `src/metadata/`: `/data` discovery, CSDL XML parsing, searchable catalog,
   cache, properties, keys, and navigation relationships.
 - `src/query/`: entity, field, filter, sort, expand, and result-limit validation.
@@ -98,31 +99,84 @@ redirects to the default application URL automatically.
 
 ## Environment configuration
 
-### Groq
+### AI providers
 
-| Variable                     | Default                          | Description                                                                                              |
-| ---------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `GROQ_API_KEY`               | unset                            | Required server-side API key. Never send it to the browser.                                              |
-| `GROQ_MODEL`                 | `openai/gpt-oss-120b`            | Model ID sent to the Chat Completions API; change to a tool-calling model enabled for your Groq account. |
-| `GROQ_BASE_URL`              | `https://api.groq.com/openai/v1` | OpenAI-compatible API base URL.                                                                          |
-| `GROQ_TEMPERATURE`           | `0.2`                            | Generation temperature.                                                                                  |
-| `GROQ_TIMEOUT_MS`            | `90000`                          | Provider request timeout.                                                                                |
-| `GROQ_MAX_COMPLETION_TOKENS` | `1024`                           | Caps each response to keep multi-step tool turns within provider token budgets.                          |
+All configured providers use the same normalized Chat Completions adapter.
+Provider credentials stay on the server. Providers without credentials are
+skipped; a configured provider also needs a model ID. Models used for ERP
+queries must support tool/function calling. Check current model support,
+account limits, regional availability, and pricing in each provider's console:
+free tiers and free model catalogs are not guaranteed and may change.
 
-The adapter sends OpenAI-compatible `tools` and `tool_choice: "auto"` and
-processes standard `tool_calls`. Model availability and tool support depend on
-Groq's current model catalog and your account. Verify a selected model against
-your own Groq credentials with `npm run smoke:groq`; that command makes a live
-provider request. The automated test suite mocks Groq; perform live checks
-against the configured account before deployment. Transient Groq HTTP 429
-responses are retried up to twice using the provider's `Retry-After` or
-token-reset headers;
-retries wait at most 60 seconds total and are cancelled if the user stops the
-request. Malformed tool-call output is retried once at zero temperature, and
-transient server errors are retried briefly. If the account's per-minute token
-allowance remains exhausted, the API returns an actionable retry delay instead
-of a generic provider error. Repeated 429s may require lower traffic or a
-higher Groq usage tier.
+| Provider | Credential | Model | Tool-call confirmation | Default API base URL |
+| --- | --- | --- | --- | --- |
+| Groq | `GROQ_API_KEY` | `GROQ_MODEL` (`openai/gpt-oss-120b`) | `GROQ_SUPPORTS_TOOLS` (default `true`) | `GROQ_BASE_URL` (`https://api.groq.com/openai/v1`) |
+| Google Gemini | `GEMINI_API_KEY` | `GEMINI_MODEL` | `GEMINI_SUPPORTS_TOOLS` (default `false`) | `GEMINI_BASE_URL` (`https://generativelanguage.googleapis.com/v1beta/openai`) |
+| Cerebras | `CEREBRAS_API_KEY` | `CEREBRAS_MODEL` | `CEREBRAS_SUPPORTS_TOOLS` (default `false`) | `CEREBRAS_BASE_URL` (`https://api.cerebras.ai/v1`) |
+| SambaNova | `SAMBANOVA_API_KEY` | `SAMBANOVA_MODEL` | `SAMBANOVA_SUPPORTS_TOOLS` (default `false`) | `SAMBANOVA_BASE_URL` (`https://api.sambanova.ai/v1`) |
+| OpenRouter | `OPENROUTER_API_KEY` | `OPENROUTER_MODEL` | `OPENROUTER_SUPPORTS_TOOLS` (default `false`) | `OPENROUTER_BASE_URL` (`https://openrouter.ai/api/v1`) |
+| Hugging Face Inference Providers | `HUGGINGFACE_API_KEY` | `HUGGINGFACE_MODEL` | `HUGGINGFACE_SUPPORTS_TOOLS` (default `false`) | `HUGGINGFACE_BASE_URL` (`https://router.huggingface.co/v1`) |
+| Local Ollama/custom endpoint | optional | `AI_FALLBACK_PROVIDERS` JSON | `supportsTools` field (default `false`) | local HTTP or custom HTTPS URL |
+
+The application does not guess model IDs for optional providers. Set both the
+provider key and model from the provider's current model catalog. For models
+verified to support tool calling, explicitly set the matching
+`*_SUPPORTS_TOOLS=true` variable (or JSON `supportsTools: true`). Other models
+are excluded from ERP tool requests instead of answering without ERP evidence.
+Configure Ollama and other custom OpenAI-compatible endpoints using:
+
+```env
+AI_FALLBACK_PROVIDERS=[{"name":"ollama-qwen","baseUrl":"http://localhost:11434/v1","model":"qwen2.5:7b","supportsTools":true,"priority":10}]
+```
+
+`apiKey` is optional only for a local loopback HTTP endpoint such as Ollama.
+Custom HTTPS endpoints require a server-side `apiKey`. Optional `priority`,
+`supportsTools`, `tasks`, `contextWindow`, `freeTier`, and `maxTokenParameter`
+fields let operators describe model capabilities without changing application
+logic. `freeTier` defaults to `unknown`; it is operator metadata, not a live
+provider quota check.
+
+| Orchestration setting | Default | Description |
+| --- | --- | --- |
+| `AI_PRIMARY_PROVIDER` | `groq` | Provider name to prioritize when configured. |
+| `AI_PROVIDER_ORDER` | `groq,gemini,cerebras,sambanova,openrouter,huggingface,ollama` | Stable fallback order; custom JSON entries can set `priority`. |
+| `AI_FALLBACK_ENABLED` | `true` | Try another available provider after a provider failure. |
+| `AI_REQUEST_TIMEOUT` | `30000` | Per-provider request timeout in milliseconds. `GROQ_TIMEOUT_MS` remains a legacy fallback. |
+| `AI_PROVIDER_COOLDOWN_MS` | `5000` | Base cooldown for temporary provider failures; repeated failures use exponential backoff. |
+| `AI_PROVIDER_MAX_COOLDOWN_MS` | `300000` | Maximum exponential circuit-breaker cooldown. Explicit upstream quota/rate-limit reset times are always honored. |
+| `GROQ_TEMPERATURE` | `0.2` | Generation temperature applied to configured providers. |
+| `GROQ_MAX_COMPLETION_TOKENS` | `1024` | Per-request output cap applied to configured providers. |
+| `AI_MAX_TURN_COMPLETION_TOKENS` | `4096` | Turn-wide generated-token budget, reserving room for a final answer. |
+
+Providers are attempted once per model per request; failures update a circuit
+breaker rather than retrying the same provider in a loop. HTTP 429 responses
+are distinguished from explicit quota exhaustion when upstream error codes,
+messages, or request-quota headers make that distinction. 401/403 credentials
+errors, provider/model errors, timeouts, connection errors, and 5xx responses
+also trigger failover. Cooldowns use retry/reset headers where available and
+otherwise use bounded exponential backoff. Provider usage and health counters
+are in memory and reset on process restart; no database is required.
+
+`GET /api/health` reports configured model names, provider availability,
+request/token counters, rate-limit/quota counts, response-time averages, last
+success, and a bounded fallback history. It never includes API keys. There is
+no separate admin dashboard. Assistant messages retain normalized content and
+include provider/model/task/fallback metadata in the existing message metadata.
+Every configured provider receives the prompts and possibly ERP-derived
+context; only configure endpoints approved for that data.
+
+Official compatibility and quota references: [Groq OpenAI compatibility](https://console.groq.com/docs/openai),
+[Groq rate limits](https://console.groq.com/docs/rate-limits),
+[Gemini OpenAI compatibility](https://ai.google.dev/gemini-api/docs/openai),
+[Gemini rate limits](https://ai.google.dev/gemini-api/docs/rate-limits),
+[Cerebras OpenAI compatibility and rate limits](https://inference-docs.cerebras.ai/resources/openai),
+[SambaNova quickstart and API URLs](https://docs.sambanova.ai/docs/en/get-started/quickstart),
+[OpenRouter API reference](https://openrouter.ai/docs/api_reference/overview.md), and
+[Hugging Face chat completions and pricing](https://huggingface.co/docs/inference-providers/en/tasks/chat-completion).
+At the time these references were checked, Hugging Face's pricing page lists no
+included Inference Provider credits for free accounts; Gemini limits are
+project/model dependent; Cerebras documents a limited free-trial tier. Verify
+current terms and your account's actual quotas before deployment.
 
 ### Dynamics 365 F&O
 
@@ -345,7 +399,8 @@ no-key local API access, and trusted-proxy conversation isolation.
 ## Troubleshooting
 
 - **Health is `degraded`:** inspect `GET /api/health` and `GET
-/api/metadata/status`; configure missing D365/Groq values and refresh metadata.
+/api/metadata/status`; configure a primary or fallback AI provider, D365 values,
+and refresh metadata.
 - **D365 auth errors:** verify the tenant token URL, application credentials,
   `D365_SCOPE` (`<environment-origin>/.default`), and D365 app permissions.
 - **D365 403 / missing entities:** confirm the integration identity's D365
@@ -355,9 +410,9 @@ no-key local API access, and trusted-proxy conversation isolation.
 - **Partial analytics:** increase `D365_ANALYTICS_MAX_ROWS` only when memory,
   response size, execution time, and D365 throttling budgets permit it, or
   narrow the filter.
-- **Groq model/tool errors:** confirm the model is currently available to the
-  account and accepts tool calling; update `GROQ_MODEL` and run the live smoke
-  check.
+- **AI provider/model errors:** inspect provider availability in
+  `GET /api/health`; confirm configured model IDs are current and support tool
+  calling, then check provider quota/credential settings.
 - **API returns 401:** the service no longer accepts an application API key.
   If using per-user ownership, configure a trusted proxy to set `X-User-Id` and
   enable `APP_TRUST_USER_HEADER`.
@@ -381,10 +436,13 @@ no-key local API access, and trusted-proxy conversation isolation.
 
 ### Change AI provider or model
 
-To select another Groq model, set `GROQ_MODEL` and verify current availability
-and tool-call compatibility. To add a provider, implement `AIProvider` in
-`src/ai/types.ts` and inject it through `createRuntime`; the agent and tool
-registry remain provider-neutral. Do not expose provider keys to the frontend.
+To change model priority, set `AI_PRIMARY_PROVIDER` and `AI_PROVIDER_ORDER`.
+The existing adapter handles providers exposing OpenAI-compatible chat
+completions; add another endpoint through `AI_FALLBACK_PROVIDERS` or its
+dedicated environment variables. For a provider with a different wire format,
+implement `AIProvider` in `src/ai/types.ts`, normalize completions/errors, and
+register it in `createRuntime`. Add mocked tests for request mapping, errors,
+tool calling, and failover. Do not expose provider keys to the frontend.
 
 ## Known limitations
 
