@@ -17,6 +17,7 @@ import { ChatService } from './chat/service';
 import { UserStore } from './auth/users';
 import { SessionService } from './auth/session';
 import { DashboardService } from './dashboard/service';
+import { DeviceConnectionService } from './device-connections/service';
 
 export interface RuntimeOptions {
   fetchImpl?: FetchLike;
@@ -41,6 +42,7 @@ export interface AppServices {
   users: UserStore;
   sessions: SessionService;
   dashboard: DashboardService;
+  deviceConnections: DeviceConnectionService;
   aiConfigured: boolean;
   d365Configured: boolean;
   d365AuthMode: 'clientCredentials' | 'static' | 'none';
@@ -190,6 +192,10 @@ export function createRuntime(config: AppConfig, options: RuntimeOptions = {}): 
     });
 
   const chat = new ChatService(conversationStore, agent, config, logger);
+  const deviceConnections = new DeviceConnectionService({
+    ttlMs: config.deviceConnections.sessionTtlMs,
+    maxSessionsPerUser: config.deviceConnections.maxSessionsPerUser,
+  });
 
   return {
     config,
@@ -206,6 +212,7 @@ export function createRuntime(config: AppConfig, options: RuntimeOptions = {}): 
     users,
     sessions,
     dashboard,
+    deviceConnections,
     aiConfigured: configuredProviders.length > 0 || options.aiProvider !== undefined,
     d365Configured,
     d365AuthMode: token.mode,

@@ -8,6 +8,8 @@
   const I18N = {
     en: {
       skip: 'Skip to message input',
+      scan_code: 'Scan a code',
+      connect_phone: 'Connect phone',
       brand: 'Touch El-Zanouki',
       brand_sub: 'Business intelligence · El-Zenouki Group',
       close_sidebar: 'Close sidebar',
@@ -169,7 +171,7 @@
       module_records_unknown: 'Records',
       module_browse: 'Browse',
       module_search_label: 'Search records',
-      module_search_placeholder: 'Search records…',
+      module_search_placeholder: 'Search one or more values (comma or line separated)…',
       search: 'Search',
       clear: 'Clear',
       previous: 'Previous',
@@ -194,6 +196,8 @@
     },
     ar: {
       skip: 'انتقل إلى حقل الرسالة',
+      scan_code: 'مسح رمز',
+      connect_phone: 'توصيل الهاتف',
       brand: 'Touch El-Zanouki',
       brand_sub: 'ذكاء الأعمال · مجموعة الزنوكي',
       close_sidebar: 'إغلاق الشريط الجانبي',
@@ -355,7 +359,7 @@
       module_records_unknown: 'السجلات',
       module_browse: 'استعراض',
       module_search_label: 'البحث في السجلات',
-      module_search_placeholder: 'ابحث في السجلات…',
+      module_search_placeholder: 'ابحث بقيمة واحدة أو أكثر (مفصولة بفاصلة أو سطر)…',
       search: 'بحث',
       clear: 'مسح',
       previous: 'السابق',
@@ -432,6 +436,13 @@
     modalBusy: false,
     lastFocus: null,
     toastTimer: null,
+    scannerControls: null,
+    scannerGeneration: 0,
+    deviceConnection: null,
+    deviceConnectionEvents: null,
+    deviceCountdownTimer: null,
+    deviceReconnectTimer: null,
+    deviceReconnectDelay: 500,
   };
 
   const $ = (id) => document.getElementById(id);
@@ -468,6 +479,8 @@
     dashboardScroll: $('dashboard-scroll'),
     dashboardUpdated: $('dashboard-updated'),
     refreshDashboard: $('refresh-dashboard'),
+    dashboardScan: $('dashboard-scan'),
+    dashboardConnectPhone: $('dashboard-connect-phone'),
     dashboardGoChat: $('dashboard-go-chat'),
     erpStatus: $('erp-status'),
     erpStatusDot: $('erp-status-dot'),
@@ -518,6 +531,29 @@
     modalCancel: $('modal-cancel'),
     modalConfirm: $('modal-confirm'),
     toast: $('toast'),
+    moduleConnectPhone: $('module-connect-phone'),
+    scanOpen: $('scan-open'),
+    scannerDialog: $('scanner-dialog'),
+    scanModel: $('scan-model'),
+    scanVideo: $('scanner-video'),
+    scanStatus: $('scanner-status'),
+    scanStart: $('scan-start'),
+    scanClose: $('scan-close'),
+    deviceDialog: $('device-connection-dialog'),
+    deviceDialogClose: $('device-dialog-close'),
+    deviceModel: $('device-model'),
+    deviceInstructions: $('device-instructions'),
+    deviceQr: $('pairing-qr'),
+    devicePairingPanel: $('pairing-panel'),
+    deviceManualLink: $('device-manual-link'),
+    devicePairingUrl: $('device-pairing-url'),
+    deviceStatus: $('device-session-status'),
+    deviceCountdown: $('device-countdown'),
+    deviceLabel: $('device-label'),
+    deviceLatest: $('device-latest'),
+    deviceResult: $('device-result-value'),
+    deviceCancel: $('device-cancel'),
+    deviceStart: $('device-start-session'),
   };
 
   class ApiError extends Error {
@@ -1819,18 +1855,55 @@
 
   // --- Module record browser ----------------------------------------------
 
-  function openModule(id) {
+  const MAX_SEARCH_VALUES = 50;
+  const MAX_SEARCH_VALUE_LENGTH = 2048;
+  const SEARCH_VALUE_SEPARATORS = /[\n\r\t,;|]+/;
+
+  function splitSearchValues(value) {
+    const text = String(value || '').trim();
+    if (!text) return [];
+    if (/^https?:\/\//i.test(text)) return [text];
+    return text
+      .split(SEARCH_VALUE_SEPARATORS)
+      .map((part) => part.trim())
+      .filter(Boolean);
+  }
+
+  function mergeSearchValues(existing, incoming) {
+    const values = [];
+    const seen = new Set();
+    for (const value of [...splitSearchValues(existing), ...splitSearchValues(incoming)]) {
+      const key = value.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      values.push(value);
+      if (values.length >= MAX_SEARCH_VALUES) break;
+    }
+    let merged = values.join(', ');
+    if (merged.length > MAX_SEARCH_VALUE_LENGTH) merged = merged.slice(0, MAX_SEARCH_VALUE_LENGTH);
+    return merged;
+  }
+
+  function openScannedModule(modelId, payload) {
+    const append = state.activeModule === modelId && state.records.scan && state.records.search;
+    const search = append
+      ? mergeSearchValues(state.records.search, payload)
+      : mergeSearchValues('', payload);
+    return openModule(modelId, search, true);
+  }
+
+  function openModule(id, initialSearch = '', scan = false) {
     const summary = moduleSummary(id);
     const definition = moduleDefinition(id);
     if (!summary && !definition) return;
     state.activeModule = id;
-    state.records = { loading: true, error: null, search: '', top: 25, skip: 0, data: null };
+    state.records = { loading: true, error: null, search: initialSearch, scan, top: 25, skip: 0, data: null };
     const modulePath = `/modules/${encodeURIComponent(id)}`;
     if (window.location.pathname !== modulePath) window.history.pushState({ module: id }, '', modulePath);
     setView('module', { silent: true });
     dom.moduleBrowser.hidden = false;
     renderDashboard();
-    void loadModuleRecords();
+    return loadModuleRecords();
   }
 
   function closeModule() {
@@ -1864,7 +1937,9 @@
       ? `${t(categoryKey(category))} · ${entitySet}`
       : entitySet;
 
-    const supportsSearch = Boolean(definition && definition.searchField);
+    const supportsSearch = Boolean(
+      definition && (definition.searchField || (Array.isArray(definition.scanFields) && definition.scanFields.length > 0)),
+    );
     dom.moduleSearch.hidden = !supportsSearch;
     dom.moduleSearchInput.disabled = !supportsSearch || state.records.loading;
     dom.moduleSearchBtn.disabled = !supportsSearch || state.records.loading;
@@ -1984,6 +2059,7 @@
     params.set('top', String(state.records.top));
     params.set('skip', String(state.records.skip));
     if (state.records.search) params.set('search', state.records.search);
+    if (state.records.scan) params.set('scan', '1');
 
     try {
       const data = await api(
@@ -2010,6 +2086,7 @@
     event.preventDefault();
     if (!state.activeModule || state.records.loading) return;
     state.records.search = dom.moduleSearchInput.value.trim();
+    state.records.scan = false;
     state.records.skip = 0;
     void loadModuleRecords();
   }
@@ -2017,9 +2094,269 @@
   function clearModuleSearch() {
     if (!state.activeModule || state.records.loading) return;
     state.records.search = '';
+    state.records.scan = false;
     state.records.skip = 0;
     dom.moduleSearchInput.value = '';
     void loadModuleRecords();
+  }
+
+  function stopScanner() {
+    state.scannerGeneration += 1;
+    if (state.scannerControls) state.scannerControls.stop();
+    state.scannerControls = null;
+    if (dom.scanVideo.srcObject) {
+      for (const track of dom.scanVideo.srcObject.getTracks()) track.stop();
+      dom.scanVideo.srcObject = null;
+    }
+    dom.scanStart.disabled = false;
+  }
+
+  async function openScanner() {
+    if (!state.dashboard.modules) await loadDashboard();
+    const modules = state.dashboard.modules && state.dashboard.modules.modules;
+    const searchable = Array.isArray(modules) ? modules.filter((module) => Array.isArray(module.scanFields) && module.scanFields.length > 0) : [];
+    dom.scanModel.replaceChildren();
+    for (const module of searchable) {
+      const option = document.createElement('option');
+      option.value = module.id;
+      option.textContent = localizedText(module.title) || module.id;
+      dom.scanModel.append(option);
+    }
+    const suggested = searchable.find((module) => module.id === state.activeModule) || searchable[0];
+    if (suggested) dom.scanModel.value = suggested.id;
+    const arabic = state.lang === 'ar';
+    $('scanner-title').textContent = arabic ? 'امسح رمز منتج أو سجل' : 'Scan a product or record code';
+    $('scanner-help').textContent = arabic
+      ? 'اختر نموذج D365 ثم امسح رمزًا أو أكثر. تُضاف النتائج إلى بحث الجدول.'
+      : 'Select the D365 model, then scan one or more codes. Results are added to the table search.';
+    dom.scanOpen.textContent = arabic ? 'مسح رمز' : 'Scan a code';
+    dom.scanStart.textContent = arabic ? 'تشغيل الكاميرا' : 'Start camera';
+    dom.scanStatus.textContent = arabic
+      ? 'يتطلب الوصول إلى الكاميرا اتصال HTTPS على هاتفك.'
+      : 'Camera access requires HTTPS on your phone.';
+    if (typeof dom.scannerDialog.showModal === 'function') dom.scannerDialog.showModal();
+    else dom.scannerDialog.setAttribute('open', '');
+  }
+
+  async function startScanner() {
+    const selectedId = dom.scanModel.value;
+    const selected = moduleDefinition(selectedId);
+    if (!selected || !Array.isArray(selected.scanFields) || selected.scanFields.length === 0) {
+      dom.scanStatus.textContent = state.lang === 'ar' ? 'لا يحتوي هذا النموذج على حقول رمز قابلة للبحث.' : 'This model has no searchable code fields.';
+      return;
+    }
+    if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      dom.scanStatus.textContent = state.lang === 'ar'
+        ? 'افتح عنوان HTTPS الخاص بالمشروع على هاتفك للسماح بالكاميرا.'
+        : 'Open the project’s HTTPS address on your phone to enable the camera.';
+      return;
+    }
+    if (!window.ZXingBrowser || !window.ZXingBrowser.BrowserMultiFormatReader) {
+      dom.scanStatus.textContent = state.lang === 'ar' ? 'مكتبة قارئ الرموز غير متاحة.' : 'The barcode reader is unavailable.';
+      return;
+    }
+    stopScanner();
+    const generation = state.scannerGeneration;
+    dom.scanStart.disabled = true;
+    dom.scanStatus.textContent = state.lang === 'ar' ? 'وجّه الكاميرا نحو الرمز…' : 'Point the camera at the code…';
+    try {
+      const reader = new window.ZXingBrowser.BrowserMultiFormatReader();
+      const controls = await reader.decodeFromVideoDevice(undefined, dom.scanVideo, (result) => {
+        if (generation !== state.scannerGeneration) return;
+        if (!result) return;
+        const scanned = result.getText().trim().slice(0, 120);
+        if (!scanned) return;
+        stopScanner();
+        if (dom.scannerDialog.open) dom.scannerDialog.close();
+        void openScannedModule(selectedId, scanned);
+      });
+      if (generation !== state.scannerGeneration) controls.stop();
+      else state.scannerControls = controls;
+    } catch (error) {
+      dom.scanStart.disabled = false;
+      dom.scanStatus.textContent = error && error.name === 'NotAllowedError'
+        ? (state.lang === 'ar' ? 'تم رفض إذن الكاميرا. اسمح به من إعدادات المتصفح.' : 'Camera permission was denied. Allow it in your browser settings.')
+        : (state.lang === 'ar' ? 'تعذر بدء الكاميرا. تحقق من الاتصال وإذن الكاميرا.' : 'Could not start the camera. Check the connection and camera permission.');
+    }
+  }
+
+  function deviceSessionStatus(status) {
+    const labels = state.lang === 'ar'
+      ? { waiting: 'بانتظار الهاتف', connected: 'الهاتف متصل', scanning: 'يتم استقبال الرموز', disconnected: 'انقطع اتصال الهاتف', expired: 'انتهت الجلسة', cancelled: 'أُلغيت الجلسة' }
+      : { waiting: 'Waiting for Phone B', connected: 'Phone B connected', scanning: 'Receiving scans from Phone B', disconnected: 'Phone B disconnected', expired: 'Session expired', cancelled: 'Session cancelled' };
+    return labels[status] || status;
+  }
+
+  function updateDeviceCountdown() {
+    const connection = state.deviceConnection;
+    if (!connection) return;
+    const left = Math.max(0, Date.parse(connection.session.expiresAt) - Date.now());
+    const minutes = Math.floor(left / 60_000);
+    const seconds = Math.floor((left % 60_000) / 1_000);
+    dom.deviceCountdown.textContent = state.lang === 'ar'
+      ? `ينتهي خلال ${minutes}:${String(seconds).padStart(2, '0')}`
+      : `Expires in ${minutes}:${String(seconds).padStart(2, '0')}`;
+    if (left === 0 && connection.session.status !== 'expired') {
+      connection.session.status = 'expired';
+      dom.deviceStatus.textContent = deviceSessionStatus('expired');
+      dom.deviceStatus.dataset.status = 'expired';
+      state.deviceConnectionEvents?.close();
+    }
+  }
+
+  function renderDeviceConnection(connection) {
+    if (!connection) {
+      dom.devicePairingPanel.hidden = true;
+      dom.deviceManualLink.hidden = true;
+      dom.deviceCancel.hidden = true;
+      dom.deviceLatest.hidden = true;
+      dom.deviceStart.hidden = false;
+      return;
+    }
+    dom.deviceQr.src = connection.qrCode;
+    dom.devicePairingPanel.hidden = false;
+    dom.deviceManualLink.hidden = false;
+    dom.devicePairingUrl.value = connection.pairingUrl;
+    dom.deviceStatus.textContent = deviceSessionStatus(connection.session.status);
+    dom.deviceStatus.dataset.status = connection.session.status;
+    dom.deviceLabel.textContent = connection.session.deviceLabel || '';
+    dom.deviceCancel.hidden = ['expired', 'cancelled'].includes(connection.session.status);
+    dom.deviceStart.textContent = state.lang === 'ar' ? 'إنشاء رمز اقتران جديد' : 'Regenerate pairing QR';
+    dom.deviceStart.disabled = false;
+    if (connection.lastScan) {
+      dom.deviceLatest.hidden = false;
+      dom.deviceResult.textContent = connection.lastScan.payload;
+    }
+    if (state.deviceCountdownTimer) clearInterval(state.deviceCountdownTimer);
+    updateDeviceCountdown();
+    state.deviceCountdownTimer = setInterval(updateDeviceCountdown, 1_000);
+  }
+
+  async function openDeviceConnection() {
+    if (!state.dashboard.modules) await loadDashboard();
+    const modules = state.dashboard.modules?.modules;
+    const scannable = Array.isArray(modules) ? modules.filter((module) => Array.isArray(module.scanFields) && module.scanFields.length) : [];
+    dom.deviceModel.replaceChildren();
+    for (const module of scannable) {
+      const option = document.createElement('option');
+      option.value = module.id;
+      option.textContent = localizedText(module.title) || module.id;
+      dom.deviceModel.append(option);
+    }
+    if (scannable.some((module) => module.id === state.activeModule)) dom.deviceModel.value = state.activeModule;
+    const ar = state.lang === 'ar';
+    $('device-dialog-title').textContent = ar ? 'توصيل الهاتف' : 'Connect a phone';
+    $('device-dialog-subtitle').textContent = ar ? 'الهاتف A يوفّر نقطة الاتصال. صِل الكمبيوتر والهاتف B بها، ثم امسح رمز الاقتران بالهاتف B.' : 'Phone A provides the hotspot. Connect the laptop and Phone B to it, then scan this pairing QR with Phone B.';
+    $('device-model-label').textContent = ar ? 'نموذج D365 للرموز الممسوحة' : 'D365 model for scanned codes';
+    $('device-link-label').textContent = ar ? 'أو افتح رابط الاقتران على الهاتف' : 'Or open this pairing link on the phone';
+    $('device-copy-link').textContent = ar ? 'نسخ الرابط' : 'Copy link';
+    dom.deviceInstructions.textContent = ar
+      ? 'الهاتف A يوفّر نقطة الاتصال فقط. صِل الكمبيوتر والهاتف B بالشبكة نفسها. امسح الهاتف B رمز الاقتران، واسمح بالكاميرا، وستصل النتائج إلى الكمبيوتر مباشرة.'
+      : 'Phone A only provides the hotspot. Connect the laptop and Phone B to the same network. Scan this pairing QR with Phone B and allow camera access; results arrive here in real time.';
+    dom.dashboardConnectPhone.textContent = t('connect_phone');
+    if (state.deviceConnection) renderDeviceConnection(state.deviceConnection);
+    if (typeof dom.deviceDialog.showModal === 'function' && !dom.deviceDialog.open) dom.deviceDialog.showModal();
+  }
+
+  function listenForDeviceEvents(sessionId) {
+    if (state.deviceReconnectTimer) clearTimeout(state.deviceReconnectTimer);
+    state.deviceReconnectTimer = null;
+    state.deviceConnectionEvents?.close();
+    if (!state.deviceConnection || state.deviceConnection.session.id !== sessionId) return;
+    if (['expired', 'cancelled'].includes(state.deviceConnection.session.status)) return;
+    const scheme = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const socket = new WebSocket(`${scheme}//${location.host}/api/device-connections/sessions/${encodeURIComponent(sessionId)}/socket`);
+    state.deviceConnectionEvents = socket;
+    let eventProcessing = Promise.resolve();
+    socket.addEventListener('open', () => { state.deviceReconnectDelay = 500; });
+    socket.addEventListener('message', (event) => {
+      eventProcessing = eventProcessing.then(async () => {
+      let data;
+      try { data = JSON.parse(event.data); } catch { return; }
+      if (!state.deviceConnection || state.deviceConnection.session.id !== sessionId) return;
+      if (['status', 'paired', 'disconnected', 'expired', 'cancelled'].includes(data.type)) {
+        state.deviceConnection.session = { ...state.deviceConnection.session, ...data };
+        dom.deviceStatus.textContent = deviceSessionStatus(state.deviceConnection.session.status);
+        dom.deviceStatus.dataset.status = state.deviceConnection.session.status;
+        dom.deviceLabel.textContent = data.deviceLabel || state.deviceConnection.session.deviceLabel || '';
+        dom.deviceCancel.hidden = ['expired', 'cancelled'].includes(state.deviceConnection.session.status);
+        if (data.type === 'paired') toast(state.lang === 'ar' ? 'تم توصيل الهاتف B.' : 'Phone B connected.');
+        if (data.type === 'expired' || data.type === 'cancelled') {
+          toast(deviceSessionStatus(data.type), data.type === 'expired');
+          socket.close();
+        }
+        if (Number.isSafeInteger(data.eventId) && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'ack', eventId: data.eventId }));
+        return;
+      }
+      if (data.type === 'scan' && typeof data.payload === 'string') {
+        state.deviceConnection.lastScan = data;
+        state.deviceConnection.session.status = 'scanning';
+        renderDeviceConnection(state.deviceConnection);
+        try { await openScannedModule(data.modelId, data.payload); }
+        catch (error) { toast(error.message || t('request_failed'), true); return; }
+        if (dom.deviceDialog.open) dom.deviceDialog.close();
+        toast(state.lang === 'ar' ? 'وصل رمز QR من الهاتف B.' : 'QR result received from Phone B.');
+        if (Number.isSafeInteger(data.eventId) && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'ack', eventId: data.eventId }));
+      }
+      }).catch((error) => toast(error.message || t('request_failed'), true));
+    });
+    socket.addEventListener('close', (event) => {
+      if (state.deviceConnectionEvents !== socket || !state.deviceConnection || state.deviceConnection.session.id !== sessionId) return;
+      if (['expired', 'cancelled'].includes(state.deviceConnection.session.status)) return;
+      if (event.code === 4401 || event.code === 4404) {
+        dom.deviceStatus.textContent = event.code === 4401 ? 'Sign in again to reconnect.' : 'Pairing session is unavailable.';
+        return;
+      }
+      dom.deviceStatus.textContent = state.lang === 'ar' ? 'جارٍ إعادة الاتصال…' : 'Reconnecting to Phone B…';
+      state.deviceReconnectTimer = setTimeout(() => {
+        state.deviceReconnectTimer = null;
+        listenForDeviceEvents(sessionId);
+      }, state.deviceReconnectDelay);
+      state.deviceReconnectDelay = Math.min(8_000, state.deviceReconnectDelay * 2);
+    });
+  }
+  async function startDeviceConnection() {
+    const modelId = dom.deviceModel.value;
+    if (!modelId) {
+      toast(state.lang === 'ar' ? 'لا توجد نماذج تدعم مسح الرموز.' : 'No scannable D365 models are available.', true);
+      return;
+    }
+    dom.deviceStart.disabled = true;
+    try {
+      if (state.deviceReconnectTimer) clearTimeout(state.deviceReconnectTimer);
+      state.deviceReconnectTimer = null;
+      if (state.deviceConnection && !['expired', 'cancelled'].includes(state.deviceConnection.session.status)) {
+        await api(`/api/device-connections/sessions/${encodeURIComponent(state.deviceConnection.session.id)}`, { method: 'DELETE' });
+        state.deviceConnection.session.status = 'cancelled';
+        state.deviceConnectionEvents?.close();
+        state.deviceConnectionEvents = null;
+      }
+      const result = await api('/api/device-connections/sessions', { method: 'POST', body: { modelId, theme: state.theme } });
+      state.deviceConnection = result;
+      state.deviceReconnectDelay = 500;
+      renderDeviceConnection(result);
+      listenForDeviceEvents(result.session.id);
+    } catch (error) {
+      toast(error.message || t('request_failed'), true);
+    } finally {
+      dom.deviceStart.disabled = false;
+    }
+  }
+
+  async function cancelDeviceConnection() {
+    if (!state.deviceConnection) return;
+    const sessionId = state.deviceConnection.session.id;
+    if (state.deviceReconnectTimer) clearTimeout(state.deviceReconnectTimer);
+    state.deviceReconnectTimer = null;
+    state.deviceConnection.session.status = 'cancelled';
+    state.deviceConnectionEvents?.close();
+    state.deviceConnectionEvents = null;
+    if (state.deviceCountdownTimer) clearInterval(state.deviceCountdownTimer);
+    try { await api(`/api/device-connections/sessions/${encodeURIComponent(sessionId)}`, { method: 'DELETE' }); }
+    catch (error) { if (error.status !== 404) toast(error.message, true); }
+    state.deviceConnection = null;
+    renderDeviceConnection(null);
+    if (dom.deviceDialog.open) dom.deviceDialog.close();
   }
 
   function renderSuggestions() {
@@ -2149,13 +2486,14 @@
   async function api(path, options) {
     const settings = options || {};
     const headers = apiHeaders();
-    if (settings.body !== undefined) headers['Content-Type'] = 'application/json';
+    const hasBody = settings.body !== undefined && settings.body !== null;
+    if (hasBody) headers['Content-Type'] = 'application/json';
     let response;
     try {
       response = await fetch(path, {
         method: settings.method || 'GET',
         headers,
-        ...(settings.body !== undefined ? { body: JSON.stringify(settings.body) } : {}),
+        ...(hasBody ? { body: typeof settings.body === 'string' ? settings.body : JSON.stringify(settings.body) } : {}),
       });
     } catch {
       throw new ApiError(t('network_error'), 0, 'NETWORK');
@@ -3227,6 +3565,33 @@
     dom.sidebarBackdrop.addEventListener('click', closeSidebar);
 
     dom.moduleBrowserClose.addEventListener('click', closeModule);
+    dom.scanOpen.addEventListener('click', () => { void openScanner(); });
+    dom.dashboardScan.addEventListener('click', () => { void openScanner(); });
+    dom.dashboardConnectPhone.addEventListener('click', () => { void openDeviceConnection(); });
+    dom.moduleConnectPhone.addEventListener('click', () => { void openDeviceConnection(); });
+    dom.deviceStart.addEventListener('click', () => { void startDeviceConnection(); });
+    dom.deviceCancel.addEventListener('click', () => { void cancelDeviceConnection(); });
+    dom.deviceDialogClose.addEventListener('click', () => dom.deviceDialog.close());
+    $('device-copy-result').addEventListener('click', async () => {
+      if (!state.deviceConnection?.lastScan) return;
+      try {
+        await navigator.clipboard.writeText(state.deviceConnection.lastScan.payload);
+        toast(state.lang === 'ar' ? 'تم نسخ نتيجة المسح.' : 'Scan result copied.');
+      } catch { toast(state.lang === 'ar' ? 'تعذر نسخ النتيجة.' : 'Could not copy the result.', true); }
+    });
+    $('device-copy-link').addEventListener('click', async () => {
+      if (!state.deviceConnection?.pairingUrl) return;
+      try {
+        await navigator.clipboard.writeText(state.deviceConnection.pairingUrl);
+        toast(state.lang === 'ar' ? 'تم نسخ رابط الاقتران.' : 'Pairing link copied.');
+      } catch { toast(state.lang === 'ar' ? 'تعذر نسخ الرابط.' : 'Could not copy the link.', true); }
+    });
+    dom.scanStart.addEventListener('click', () => { void startScanner(); });
+    dom.scanClose.addEventListener('click', () => {
+      stopScanner();
+      if (dom.scannerDialog.open) dom.scannerDialog.close();
+    });
+    dom.scannerDialog.addEventListener('close', stopScanner);
     dom.moduleSearch.addEventListener('submit', submitModuleSearch);
     dom.moduleSearchClear.addEventListener('click', clearModuleSearch);
     dom.modulePrev.addEventListener('click', () => {

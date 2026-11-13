@@ -7,6 +7,7 @@ import express, {
   type Response,
 } from 'express';
 import { randomUUID } from 'node:crypto';
+import QRCode from 'qrcode';
 import { toPublicError, isAbortError, ValidationError, NotFoundError } from './errors';
 import type { AppServices } from './runtime';
 import { authMiddleware, requireSession } from './http/auth';
@@ -15,6 +16,8 @@ import { RateLimiter, chatRateLimitMiddleware, rateLimitMiddleware } from './htt
 import { requestIdMiddleware, sameOriginGuard, securityHeaders } from './http/security';
 import type { AgentStatus } from './ai/status';
 import type { PublicConversation } from './chat/types';
+import { findDashboardModule } from './dashboard/modules';
+import { discoverLanIpv4, isPrivateLanIpv4 } from './device-connections/network';
 
 const VERSION = '2.0.0';
 const MAX_METADATA_QUERY = 200;
@@ -166,7 +169,63 @@ export function createApp(services: AppServices): Express {
   );
 
   app.use('/api', rateLimitMiddleware(globalLimiter));
+
+  const devicePublicLimiter = new RateLimiter({ windowMs: 60_000, max: 90 });
+  const deviceCreateLimiter = new RateLimiter({ windowMs: 60_000, max: 10 });
+
+  app.post('/api/device-connections/sessions/:id/pair', rateLimitMiddleware(devicePublicLimiter), asyncHandler(async (req, res) => {
+    const body = (req.body ?? {}) as { pairingToken?: unknown; deviceLabel?: unknown };
+    if (typeof body.pairingToken !== 'string') throw new ValidationError('Pairing token is required.');
+    const paired = services.deviceConnections.pair(
+      pathParam(req, 'id'),
+      body.pairingToken,
+      typeof body.deviceLabel === 'string' ? body.deviceLabel : 'Mobile device',
+    );
+    res.json(paired);
+  }));
+
   app.use('/api', requireSession);
+
+  app.post('/api/device-connections/sessions', rateLimitMiddleware(deviceCreateLimiter), asyncHandler(async (req, res) => {
+    const body = (req.body ?? {}) as { modelId?: unknown; connectionType?: unknown; theme?: unknown };
+    if (typeof body.modelId !== 'string' || (body.connectionType !== undefined && body.connectionType !== 'qr-session')) {
+      throw new ValidationError('Select a model for QR pairing.');
+    }
+    if (!req.secure) throw new ValidationError('Phone camera and WebSocket access require local HTTPS. Configure HTTPS_KEY_FILE and HTTPS_CERT_FILE, then reopen the app over HTTPS.');
+    const module = findDashboardModule(body.modelId);
+    if (!module?.scanFields?.length) throw new ValidationError('The selected D365 model cannot receive scanned codes.');
+    const ownerId = requireUserId(req);
+    const requestHost = (req.hostname ?? '').replace(/^\[|\]$/g, '');
+    const lanIp = config.deviceConnections.lanIp ?? (isPrivateLanIpv4(requestHost) ? requestHost : discoverLanIpv4());
+    if (!lanIp) throw new ValidationError('No private LAN IPv4 address was found. Set DEVICE_CONNECTION_LAN_IP to the laptop address on Phone A hotspot.');
+    const created = services.deviceConnections.create(ownerId, body.modelId, 'qr-session');
+    const port = config.port === 443 ? '' : `:${config.port}`;
+    const pairingUrl = new URL(`https://${lanIp}${port}/device-scan/${created.sessionId}`);
+    const theme = body.theme === 'dark' ? 'dark' : 'light';
+    pairingUrl.hash = `pair=${created.pairingToken}&theme=${theme}`;
+    try {
+      const qrCode = await QRCode.toDataURL(pairingUrl.toString(), { width: 320, margin: 2, errorCorrectionLevel: 'Q' });
+      logger.audit({ action: 'device_connection.create', outcome: 'success', userRef: ownerId, metadata: { connectionType: 'qr-session', modelId: body.modelId, lanIp } });
+      res.status(201).json({ session: services.deviceConnections.get(ownerId, created.sessionId), pairingUrl: pairingUrl.toString(), qrCode });
+    } catch (error) {
+      services.deviceConnections.cancel(ownerId, created.sessionId);
+      throw error;
+    }
+  }));
+
+  app.get('/api/device-connections/sessions/:id', (req, res, next) => {
+    try { res.json({ session: services.deviceConnections.get(requireUserId(req), pathParam(req, 'id')) }); }
+    catch (error) { next(error); }
+  });
+
+  app.delete('/api/device-connections/sessions/:id', (req, res, next) => {
+    try {
+      const ownerId = requireUserId(req);
+      services.deviceConnections.cancel(ownerId, pathParam(req, 'id'));
+      logger.audit({ action: 'device_connection.cancel', outcome: 'success', userRef: ownerId });
+      res.status(204).end();
+    } catch (error) { next(error); }
+  });
 
   app.get(
     '/api/metadata/status',
@@ -439,10 +498,12 @@ export function createApp(services: AppServices): Express {
     asyncHandler(async (req, res) => {
       const search = typeof req.query.search === 'string' ? req.query.search : '';
       const top = parsePositiveInt(req.query.top, 25, 100);
+      const scan = req.query.scan === 'true' || req.query.scan === '1';
       const skipRaw = typeof req.query.skip === 'string' ? Number(req.query.skip) : 0;
       const skip = Number.isFinite(skipRaw) ? Math.max(0, Math.trunc(skipRaw)) : 0;
       const result = await services.dashboard.records(pathParam(req, 'id'), {
         search,
+        scan,
         top,
         skip,
       });
@@ -466,6 +527,11 @@ export function createApp(services: AppServices): Express {
     // Shared design tokens and base components used by the login page.
     '/styles.css',
     '/touch-logo.png',
+    '/mobile-scan.css',
+    '/mobile-scanner.js',
+    '/connection-provider.js',
+    '/qr-scanner.js',
+    '/zxing-browser.min.js',
     '/favicon.ico',
   ]);
 
@@ -475,6 +541,12 @@ export function createApp(services: AppServices): Express {
       return;
     }
     res.sendFile(loginPage);
+  });
+
+  app.get('/device-scan/:id', (req, res) => {
+    if (!/^[0-9a-f-]{36}$/i.test(pathParam(req, 'id'))) { res.status(404).end(); return; }
+    res.setHeader('Cache-Control', 'no-store');
+    res.sendFile(path.join(publicDir, 'mobile-scan.html'));
   });
 
   app.use((req, res, next) => {

@@ -105,10 +105,19 @@ export interface AppConfig {
   ai: AIConfig;
   conversations: ConversationConfig;
   auth: AuthConfig;
+  https: {
+    keyFile?: string;
+    certFile?: string;
+  };
   metadata: {
     cacheTtlMs: number;
     cacheDir: string;
     maxBytes: number;
+  };
+  deviceConnections: {
+    sessionTtlMs: number;
+    lanIp?: string;
+    maxSessionsPerUser: number;
   };
   auditLogFile?: string;
   warnings: string[];
@@ -576,14 +585,23 @@ export function createConfig(env: EnvLike = process.env): AppConfig {
       sessionSecret,
       sessionTtlMs: clamp(int(env, 'SESSION_TTL_MS', 8 * 60 * 60 * 1_000), 5 * 60 * 1_000, 30 * 24 * 60 * 60 * 1_000),
       cookieName,
-      cookieSecure: bool(env, 'SESSION_COOKIE_SECURE', nodeEnv === 'production'),
+      cookieSecure: bool(env, 'SESSION_COOKIE_SECURE', nodeEnv === 'production' || Boolean(str(env, 'HTTPS_KEY_FILE'))),
       loginWindowMs: clamp(int(env, 'LOGIN_RATE_LIMIT_WINDOW_MS', 15 * 60 * 1_000), 10_000, 24 * 60 * 60 * 1_000),
       loginMaxAttempts: clamp(int(env, 'LOGIN_RATE_LIMIT_MAX', 10), 1, 1_000),
+    },
+    https: {
+      keyFile: str(env, 'HTTPS_KEY_FILE') ? path.resolve(str(env, 'HTTPS_KEY_FILE')) : undefined,
+      certFile: str(env, 'HTTPS_CERT_FILE') ? path.resolve(str(env, 'HTTPS_CERT_FILE')) : undefined,
     },
     metadata: {
       cacheTtlMs: clamp(int(env, 'AI_METADATA_CACHE_TTL', 86_400), 0, 31_536_000) * 1_000,
       cacheDir,
       maxBytes: clamp(int(env, 'METADATA_MAX_BYTES', 128 * 1024 * 1024), 1024 * 1024, 512 * 1024 * 1024),
+    },
+    deviceConnections: {
+      sessionTtlMs: clamp(int(env, 'DEVICE_CONNECTION_SESSION_TTL_MS', 5 * 60 * 1_000), 60_000, 60 * 60 * 1_000),
+      lanIp: privateIpv4(str(env, 'DEVICE_CONNECTION_LAN_IP')),
+      maxSessionsPerUser: clamp(int(env, 'DEVICE_CONNECTION_MAX_SESSIONS_PER_USER', 3), 1, 10),
     },
     auditLogFile: str(env, 'AUDIT_LOG_FILE') || undefined,
     warnings,
@@ -594,5 +612,18 @@ export function createConfig(env: EnvLike = process.env): AppConfig {
     config.ai.enableReadOnly = true;
   }
 
+  if (Boolean(config.https.keyFile) !== Boolean(config.https.certFile)) {
+    throw new Error('Set both HTTPS_KEY_FILE and HTTPS_CERT_FILE to enable local HTTPS.');
+  }
+
   return config;
+}
+
+function privateIpv4(raw: string): string | undefined {
+  if (!raw) return undefined;
+  const parts = raw.split('.').map(Number);
+  const isIpv4 = parts.length === 4 && parts.every((part) => Number.isInteger(part) && part >= 0 && part <= 255);
+  const isPrivate = isIpv4 && (parts[0] === 10 || (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) || (parts[0] === 192 && parts[1] === 168));
+  if (!isPrivate) throw new Error('DEVICE_CONNECTION_LAN_IP must be a private LAN IPv4 address.');
+  return raw;
 }

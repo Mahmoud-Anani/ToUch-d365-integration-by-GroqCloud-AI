@@ -412,7 +412,10 @@ const MAX_GROUP_ROWS = 12;
 const MAX_DRILL_KEY_LENGTH = 200;
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
-const MAX_SEARCH_LENGTH = 120;
+const MAX_SEARCH_LENGTH = 2_048;
+const MAX_SEARCH_TERMS = 50;
+const MAX_SEARCH_TERM_LENGTH = 512;
+const SEARCH_TERM_SEPARATORS = /[\n\r\t,;|]+/;
 const MAX_SKIP = 100_000;
 const OVERVIEW_CACHE_MS = 15_000;
 
@@ -421,6 +424,45 @@ const BLANK_GROUP_KEY = '(blank)';
 
 function safeMessage(error: unknown): string {
   return toPublicError(error).body.error.message;
+}
+
+function addSearchTerm(terms: string[], seen: Set<string>, raw: string): void {
+  const value = raw.trim();
+  if (!value || value.length > MAX_SEARCH_TERM_LENGTH) return;
+  const key = value.toLowerCase();
+  if (seen.has(key)) return;
+  seen.add(key);
+  terms.push(value);
+}
+
+/**
+ * Accepts a single value, or several values separated by commas, semicolons,
+ * pipes, tabs or new lines. Scanned QR links also contribute their query
+ * values and last path segment so a link can find its record.
+ */
+function parseSearchTerms(search: string): string[] {
+  const terms: string[] = [];
+  const seen = new Set<string>();
+  const isUrl = /^https?:\/\//i.test(search);
+  if (!SEARCH_TERM_SEPARATORS.test(search) || isUrl) addSearchTerm(terms, seen, search);
+  for (const part of search.split(SEARCH_TERM_SEPARATORS)) addSearchTerm(terms, seen, part);
+  if (isUrl) {
+    try {
+      const url = new URL(search);
+      for (const value of url.searchParams.values()) addSearchTerm(terms, seen, value);
+      const lastSegment = url.pathname.split('/').filter(Boolean).at(-1);
+      if (lastSegment) {
+        try {
+          addSearchTerm(terms, seen, decodeURIComponent(lastSegment));
+        } catch {
+          addSearchTerm(terms, seen, lastSegment);
+        }
+      }
+    } catch {
+      // Keep the split terms even when the URL cannot be parsed.
+    }
+  }
+  return terms.slice(0, MAX_SEARCH_TERMS);
 }
 
 /**
@@ -729,7 +771,7 @@ export class DashboardService {
 
   async records(
     id: string,
-    options: { search?: string; top?: number; skip?: number } = {},
+    options: { search?: string; top?: number; skip?: number; scan?: boolean } = {},
   ): Promise<ModuleRecords> {
     const module = findDashboardModule(id);
     if (!module) throw new NotFoundError('Dashboard module was not found.');
@@ -738,7 +780,19 @@ export class DashboardService {
     if (search.length > MAX_SEARCH_LENGTH) {
       throw new ValidationError(`Search text must be at most ${MAX_SEARCH_LENGTH} characters.`);
     }
-    if (search && !module.searchField) {
+    const searchTerms = parseSearchTerms(search);
+    const searchActive = searchTerms.length > 0;
+    const scanFields = options.scan ? (module.scanFields ?? []) : [];
+    if (options.scan && scanFields.length === 0) {
+      throw new ValidationError('This module does not support code scanning.');
+    }
+    if (options.scan && !searchActive) {
+      throw new ValidationError('A scanned code is required.');
+    }
+    const searchFields = options.scan
+      ? scanFields
+      : [...new Set([...(module.scanFields ?? []), ...(module.searchField ? [module.searchField] : [])])];
+    if (searchActive && searchFields.length === 0) {
       throw new ValidationError('This module does not support text search.');
     }
 
@@ -762,19 +816,26 @@ export class DashboardService {
 
     // Live D365 rejects contains()/startswith() with a 400 on these
     // integration-map entities, so searched queries scan a bounded,
-    // server-ordered page set and filter in memory. The search field must
+    // server-ordered page set and filter in memory. Every search field must
     // therefore always be part of the selection.
-    if (search && entity && module.searchField) {
-      const searchProperty = entity.properties.find(
-        (property) => property.name.toLowerCase() === (module.searchField as string).toLowerCase(),
-      );
-      if (!searchProperty) {
+    let matchFields = searchFields;
+    if (searchActive && entity && matchFields.length > 0) {
+      const resolvedMatchFields: string[] = [];
+      for (const matchField of matchFields) {
+        const searchProperty = entity.properties.find(
+          (property) => property.name.toLowerCase() === matchField.toLowerCase(),
+        );
+        if (!searchProperty) continue;
+        resolvedMatchFields.push(searchProperty.name);
+        const alreadySelected = select.some(
+          (field) => field.toLowerCase() === searchProperty.name.toLowerCase(),
+        );
+        if (!alreadySelected) select = [...select, searchProperty.name];
+      }
+      if (resolvedMatchFields.length === 0) {
         throw new ValidationError('This module does not support text search.');
       }
-      const alreadySelected = select.some(
-        (field) => field.toLowerCase() === searchProperty.name.toLowerCase(),
-      );
-      if (!alreadySelected) select = [...select, searchProperty.name];
+      matchFields = resolvedMatchFields;
     }
 
     const query = await this.options.queryBuilder.validate({
@@ -793,8 +854,7 @@ export class DashboardService {
       return { name, kind: property ? propertyKind(property.type) : 'unknown' };
     });
 
-    if (search && module.searchField) {
-      const searchField = module.searchField;
+    if (searchActive && matchFields.length > 0) {
       const scan = await this.options.client.fetchAllPages(
         query.entity.entitySet,
         this.options.queryBuilder.toScanParams(query),
@@ -803,12 +863,11 @@ export class DashboardService {
           pageSize: Math.max(1, this.options.searchPageSize),
         },
       );
-      const needle = search.toLowerCase();
-      const filtered = scan.rows.filter((row) =>
-        String(row?.[searchField] ?? '')
-          .toLowerCase()
-          .includes(needle),
-      );
+      const needles = searchTerms.map((term) => term.toLowerCase());
+      const filtered = scan.rows.filter((row) => matchFields.some((field) => {
+        const value = String(row?.[field] ?? '').trim().toLowerCase();
+        return needles.some((needle) => (options.scan ? value === needle : value.includes(needle)));
+      }));
       const page = filtered.slice(skip, skip + top);
       return {
         module: {

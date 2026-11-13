@@ -3,7 +3,9 @@ dist/
 coverage/
 data/
 .env
+certs/
 *.log
 .DS_Store
 Thumbs.db
 New Text Document.txt
+.env.example
