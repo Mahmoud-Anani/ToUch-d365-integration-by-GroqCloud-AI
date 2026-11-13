@@ -171,7 +171,7 @@
       module_records_unknown: 'Records',
       module_browse: 'Browse',
       module_search_label: 'Search records',
-      module_search_placeholder: 'Search records…',
+      module_search_placeholder: 'Search one or more values (comma or line separated)…',
       search: 'Search',
       clear: 'Clear',
       previous: 'Previous',
@@ -359,7 +359,7 @@
       module_records_unknown: 'السجلات',
       module_browse: 'استعراض',
       module_search_label: 'البحث في السجلات',
-      module_search_placeholder: 'ابحث في السجلات…',
+      module_search_placeholder: 'ابحث بقيمة واحدة أو أكثر (مفصولة بفاصلة أو سطر)…',
       search: 'بحث',
       clear: 'مسح',
       previous: 'السابق',
@@ -1855,6 +1855,43 @@
 
   // --- Module record browser ----------------------------------------------
 
+  const MAX_SEARCH_VALUES = 50;
+  const MAX_SEARCH_VALUE_LENGTH = 2048;
+  const SEARCH_VALUE_SEPARATORS = /[\n\r\t,;|]+/;
+
+  function splitSearchValues(value) {
+    const text = String(value || '').trim();
+    if (!text) return [];
+    if (/^https?:\/\//i.test(text)) return [text];
+    return text
+      .split(SEARCH_VALUE_SEPARATORS)
+      .map((part) => part.trim())
+      .filter(Boolean);
+  }
+
+  function mergeSearchValues(existing, incoming) {
+    const values = [];
+    const seen = new Set();
+    for (const value of [...splitSearchValues(existing), ...splitSearchValues(incoming)]) {
+      const key = value.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      values.push(value);
+      if (values.length >= MAX_SEARCH_VALUES) break;
+    }
+    let merged = values.join(', ');
+    if (merged.length > MAX_SEARCH_VALUE_LENGTH) merged = merged.slice(0, MAX_SEARCH_VALUE_LENGTH);
+    return merged;
+  }
+
+  function openScannedModule(modelId, payload) {
+    const append = state.activeModule === modelId && state.records.scan && state.records.search;
+    const search = append
+      ? mergeSearchValues(state.records.search, payload)
+      : mergeSearchValues('', payload);
+    return openModule(modelId, search, true);
+  }
+
   function openModule(id, initialSearch = '', scan = false) {
     const summary = moduleSummary(id);
     const definition = moduleDefinition(id);
@@ -1866,7 +1903,7 @@
     setView('module', { silent: true });
     dom.moduleBrowser.hidden = false;
     renderDashboard();
-    void loadModuleRecords();
+    return loadModuleRecords();
   }
 
   function closeModule() {
@@ -1900,7 +1937,9 @@
       ? `${t(categoryKey(category))} · ${entitySet}`
       : entitySet;
 
-    const supportsSearch = Boolean(definition && definition.searchField);
+    const supportsSearch = Boolean(
+      definition && (definition.searchField || (Array.isArray(definition.scanFields) && definition.scanFields.length > 0)),
+    );
     dom.moduleSearch.hidden = !supportsSearch;
     dom.moduleSearchInput.disabled = !supportsSearch || state.records.loading;
     dom.moduleSearchBtn.disabled = !supportsSearch || state.records.loading;
@@ -2087,7 +2126,9 @@
     if (suggested) dom.scanModel.value = suggested.id;
     const arabic = state.lang === 'ar';
     $('scanner-title').textContent = arabic ? 'امسح رمز منتج أو سجل' : 'Scan a product or record code';
-    $('scanner-help').textContent = arabic ? 'اختر النموذج أولاً.' : 'Select the D365 model first.';
+    $('scanner-help').textContent = arabic
+      ? 'اختر نموذج D365 ثم امسح رمزًا أو أكثر. تُضاف النتائج إلى بحث الجدول.'
+      : 'Select the D365 model, then scan one or more codes. Results are added to the table search.';
     dom.scanOpen.textContent = arabic ? 'مسح رمز' : 'Scan a code';
     dom.scanStart.textContent = arabic ? 'تشغيل الكاميرا' : 'Start camera';
     dom.scanStatus.textContent = arabic
@@ -2127,7 +2168,7 @@
         if (!scanned) return;
         stopScanner();
         if (dom.scannerDialog.open) dom.scannerDialog.close();
-        openModule(selectedId, scanned, true);
+        void openScannedModule(selectedId, scanned);
       });
       if (generation !== state.scannerGeneration) controls.stop();
       else state.scannerControls = controls;
@@ -2251,7 +2292,7 @@
         state.deviceConnection.lastScan = data;
         state.deviceConnection.session.status = 'scanning';
         renderDeviceConnection(state.deviceConnection);
-        try { await openModule(data.modelId, data.payload, true); }
+        try { await openScannedModule(data.modelId, data.payload); }
         catch (error) { toast(error.message || t('request_failed'), true); return; }
         if (dom.deviceDialog.open) dom.deviceDialog.close();
         toast(state.lang === 'ar' ? 'وصل رمز QR من الهاتف B.' : 'QR result received from Phone B.');
@@ -2290,7 +2331,7 @@
         state.deviceConnectionEvents?.close();
         state.deviceConnectionEvents = null;
       }
-      const result = await api('/api/device-connections/sessions', { method: 'POST', body: JSON.stringify({ modelId, theme: state.theme }) });
+      const result = await api('/api/device-connections/sessions', { method: 'POST', body: { modelId, theme: state.theme } });
       state.deviceConnection = result;
       state.deviceReconnectDelay = 500;
       renderDeviceConnection(result);
@@ -2445,13 +2486,14 @@
   async function api(path, options) {
     const settings = options || {};
     const headers = apiHeaders();
-    if (settings.body !== undefined) headers['Content-Type'] = 'application/json';
+    const hasBody = settings.body !== undefined && settings.body !== null;
+    if (hasBody) headers['Content-Type'] = 'application/json';
     let response;
     try {
       response = await fetch(path, {
         method: settings.method || 'GET',
         headers,
-        ...(settings.body !== undefined ? { body: JSON.stringify(settings.body) } : {}),
+        ...(hasBody ? { body: typeof settings.body === 'string' ? settings.body : JSON.stringify(settings.body) } : {}),
       });
     } catch {
       throw new ApiError(t('network_error'), 0, 'NETWORK');

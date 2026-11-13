@@ -11,6 +11,12 @@
     privacy:'سيتم إرسال المحتوى إلى الكمبيوتر المقترن. لن يتم فتح الروابط تلقائيًا.', permission:'تعذر الوصول إلى الكاميرا. اسمح بالإذن أو أدخل الرمز يدويًا.',
     noCamera:'لم يتم العثور على كاميرا. يمكنك إدخال الرمز يدويًا.', scanning:'وجّه الكاميرا نحو رمز QR.', sent:'تم إرسال الرمز إلى الكمبيوتر.',
     duplicate:'تم إرسال هذا الرمز مؤخرًا.', connectionError:'تعذر إرسال الرمز. تحقق من الاتصال ثم أعد المحاولة.', expired:'انتهت جلسة الاتصال. أعد الاقتران من الكمبيوتر.',
+    insecure:'تتطلب الكاميرا اتصال HTTPS موثوقًا. افتح رابط HTTPS وثبّت الشهادة على الهاتف ثم أعد تحميل الصفحة.',
+    permissionDenied:'تم حظر إذن الكاميرا. اضغط رمز القفل في شريط العنوان واسمح بالكاميرا ثم أعد تحميل الصفحة.',
+    cameraBusy:'الكاميرا قيد الاستخدام بواسطة تطبيق آخر. أغلق التطبيق الآخر ثم حاول مجددًا.',
+    cameraUnavailable:'الكاميرا المحددة غير متاحة. اختر كاميرا أخرى ثم حاول مجددًا.',
+    multipleHint:'أدخل رمزًا واحدًا أو عدة رموز مفصولة بفاصلة أو سطر جديد.',
+    scanningMultiple:'امسح رموزًا متعددة؛ سيتم البحث عنها كلها في الجدول.',
     invalid:'الرمز فارغ أو أطول من الحد المسموح.',
   } : {
     title:'Mobile QR scanner', subtitle:'Connecting to your laptop…', connecting:'Connecting', connected:'Phone connected to your laptop', disconnected:'Phone disconnected', reconnecting:'Reconnecting to laptop…',
@@ -20,6 +26,12 @@
     privacy:'Scanned content is sent to your paired laptop. Links are never opened automatically.', permission:'Camera access failed. Allow it in browser settings or enter the code manually.',
     noCamera:'No camera found. You can enter the code manually.', scanning:'Point the camera at a QR code.', sent:'Code sent to your laptop.',
     duplicate:'This code was sent recently.', connectionError:'Could not send the code. Check the connection and retry.', expired:'Connection session expired. Pair again from your laptop.',
+    insecure:'Camera needs a trusted HTTPS connection. Open the HTTPS link, trust the certificate on this phone, then reload.',
+    permissionDenied:'Camera permission is blocked. Tap the lock icon in the address bar, allow Camera, then reload.',
+    cameraBusy:'The camera is being used by another app. Close it and try again.',
+    cameraUnavailable:'The selected camera is unavailable. Choose another camera and try again.',
+    multipleHint:'Enter one code or several codes separated by commas or new lines.',
+    scanningMultiple:'Scan several codes; all of them will be searched in the table.',
     invalid:'Code is empty or longer than allowed.',
   };
 
@@ -52,9 +64,28 @@
     $('manual-form').querySelector('button').textContent = strings.send;
     $('last-label').textContent = strings.latest;
     ui.last.textContent = strings.none;
+    ui.manual.placeholder = strings.multipleHint;
     ui.retry.textContent = strings.retry;
     ui.disconnect.textContent = strings.disconnect;
     $('privacy-note').textContent = strings.privacy;
+    if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+      ui.feedback.textContent = strings.insecure;
+    }
+  }
+
+  function cameraErrorMessage(error) {
+    switch (error?.name) {
+      case 'InsecureContextError':
+      case 'SecurityError': return strings.insecure;
+      case 'NotAllowedError': return strings.permissionDenied;
+      case 'NotFoundError':
+      case 'DevicesNotFoundError': return strings.noCamera;
+      case 'NotReadableError':
+      case 'TrackStartError': return strings.cameraBusy;
+      case 'OverconstrainedError':
+      case 'ConstraintNotSatisfiedError': return strings.cameraUnavailable;
+      default: return strings.permission;
+    }
   }
 
   function setConnectionStatus(status) {
@@ -145,31 +176,41 @@
 
   async function startCamera(deviceId) {
     if (!scanner) return;
+    ui.start.disabled = true;
     try {
-      if (!cameras.length) cameras = await scanner.listCameras();
-      if (!deviceId) {
-        const rear = cameras.find((camera) => /back|rear|environment/i.test(camera.label));
-        deviceId = rear?.deviceId || cameras.at(-1)?.deviceId;
+      // Start the camera first. Enumerating cameras before permission is
+      // granted returns an empty list on many mobile browsers, which used to
+      // prevent the permission prompt from ever appearing.
+      await scanner.start(deviceId || undefined);
+      try {
+        cameras = await scanner.listCameras();
+        if (cameras.length > 1) {
+          ui.select.replaceChildren(...cameras.map((camera, index) => {
+            const option = document.createElement('option');
+            option.value = camera.deviceId;
+            option.textContent = camera.label || `${strings.camera} ${index + 1}`;
+            return option;
+          }));
+          const activeDeviceId = ui.video.srcObject?.getVideoTracks?.()[0]?.getSettings?.().deviceId;
+          ui.select.value = activeDeviceId || deviceId || cameras[0].deviceId;
+          ui.select.hidden = false;
+          ui.cameraLabel.hidden = false;
+        } else {
+          ui.select.hidden = true;
+          ui.cameraLabel.hidden = true;
+        }
+      } catch {
+        ui.select.hidden = true;
+        ui.cameraLabel.hidden = true;
       }
-      if (!cameras.length) throw new Error('NotFoundError');
-      if (cameras.length > 1) {
-        ui.select.replaceChildren(...cameras.map((camera,index) => {
-          const option = document.createElement('option');
-          option.value = camera.deviceId;
-          option.textContent = camera.label || `${strings.camera} ${index + 1}`;
-          return option;
-        }));
-        ui.select.value = deviceId || cameras[0].deviceId;
-        ui.select.hidden = false;
-        ui.cameraLabel.hidden = false;
-      }
-      await scanner.start(deviceId);
       const track = ui.video.srcObject?.getVideoTracks?.()[0];
       ui.torch.hidden = !track?.getCapabilities?.().torch;
     } catch (error) {
-      ui.feedback.textContent = error?.name === 'NotFoundError' ? strings.noCamera : strings.permission;
+      ui.feedback.textContent = cameraErrorMessage(error);
       ui.start.hidden = false;
       ui.stop.hidden = true;
+    } finally {
+      ui.start.disabled = false;
     }
   }
 

@@ -17,7 +17,7 @@ body { margin:0; min-height:100vh; color:var(--text); background:var(--bg); }
 .finder-frame { position:absolute; width:min(62vw,230px); aspect-ratio:1; border:3px solid rgba(255,255,255,.9); border-radius:18px; box-shadow:0 0 0 999px rgba(0,0,0,.18); pointer-events:none; }
 .feedback { min-height:38px; margin:12px 0; color:var(--muted); font-size:14px; line-height:1.4; }
 .camera-actions,.camera-tools { display:flex; align-items:center; gap:9px; }
-button,select,input { min-height:44px; font:inherit; }
+button,select,input,textarea { min-height:44px; font:inherit; }
 button { border:0; border-radius:10px; padding:10px 14px; font-weight:650; cursor:pointer; }
 button:disabled { cursor:not-allowed; opacity:.55; }
 .primary { flex:1; color:#fff; background:var(--accent); }
@@ -27,7 +27,8 @@ button:disabled { cursor:not-allowed; opacity:.55; }
 .manual-form { margin-top:18px; }
 .manual-form label { display:block; margin-bottom:7px; font-size:13px; font-weight:650; }
 .manual-form div { display:flex; gap:8px; }
-.manual-form input { flex:1; min-width:0; border:1px solid var(--border); border-radius:9px; padding:9px; color:var(--text); background:var(--surface); }
+.manual-form input,.manual-form textarea { flex:1; min-width:0; border:1px solid var(--border); border-radius:9px; padding:9px; color:var(--text); background:var(--surface); }
+.manual-form textarea { resize:vertical; min-height:44px; }
 .full-width { width:100%; margin-top:10px; }
 .last-result { margin-top:12px; }
 .last-result h2 { margin:0 0 8px; font-size:15px; }

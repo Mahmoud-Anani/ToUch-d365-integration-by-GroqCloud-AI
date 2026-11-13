@@ -40,7 +40,7 @@ describe('DeviceConnectionService', () => {
 
     service.subscribe('user:alice', created.sessionId, (event) => replayed.push(event.type));
 
-    expect(replayed).toEqual(['paired', 'scan']);
+    expect(replayed).toEqual(['status', 'paired', 'scan']);
   });
 
   it('rejects duplicate payloads even when they arrive with a new request id', () => {

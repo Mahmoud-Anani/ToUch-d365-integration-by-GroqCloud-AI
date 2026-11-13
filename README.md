@@ -328,7 +328,10 @@ create a pairing QR. Phone A only supplies the hotspot; connect the laptop and
 Phone B to it. The laptop serves the app on its private hotspot IPv4 and port.
 Phone B scans the pairing QR, opens the mobile scanner in its browser, and then
 scans business QR codes. Each scan goes over an authenticated WebSocket and
-opens the selected D365 model's results on the laptop. Laptop and phone sockets
+opens the selected D365 model's results on the laptop. Repeated scans and manual
+entries are added to the same table search, which also accepts several values
+separated by commas, semicolons, pipes, or new lines. Scanned QR links are
+matched by their query values and final path segment. Laptop and phone sockets
 reconnect automatically, with event replay and scan acknowledgements to avoid
 losing a scan when the connection drops.
 
@@ -405,7 +408,8 @@ The session/event store is in-memory and single-process.
 1. Enable Phone A's hotspot, connect the laptop and Phone B, then open the app
    on the laptop using its hotspot IPv4 over trusted HTTPS.
 2. On the laptop create a pairing QR. Scan it with Phone B, allow camera access,
-   scan two different codes, and verify results open in the selected module.
+   scan two different codes, and verify both results appear in the selected
+   module table.
 3. Briefly disconnect and reconnect Phone B to the hotspot, retry a pending
    scan, and confirm both WebSockets recover without losing the scan.
 4. Test denied camera permission and manual code entry.

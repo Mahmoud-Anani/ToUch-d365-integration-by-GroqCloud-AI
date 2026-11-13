@@ -23,22 +23,32 @@
 
     async start(deviceId) {
       if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
-        throw new Error('Camera access requires HTTPS on this device.');
+        const error = new Error('Camera access requires trusted HTTPS on this device.');
+        error.name = 'InsecureContextError';
+        throw error;
       }
       if (!window.ZXingBrowser?.BrowserMultiFormatReader) throw new Error('QR reader is unavailable.');
       this.stop();
       this.reader = this.reader || new window.ZXingBrowser.BrowserMultiFormatReader();
+      const onDecoded = (result) => {
+        if (!result) return;
+        const payload = result.getText().trim();
+        if (!payload || new TextEncoder().encode(payload).length > 2_048) return;
+        const now = Date.now();
+        if (payload === this.lastPayload && now - this.lastPayloadAt < this.duplicateWindowMs) return;
+        this.lastPayload = payload;
+        this.lastPayloadAt = now;
+        this.onResult({ id: this.createId(), payload, scannedAt: new Date(now).toISOString(), format: String(result.getBarcodeFormat?.() || 'QR_CODE') });
+      };
       try {
-        this.controls = await this.reader.decodeFromVideoDevice(deviceId, this.video, (result) => {
-          if (!result) return;
-          const payload = result.getText().trim();
-          if (!payload || new TextEncoder().encode(payload).length > 2_048) return;
-          const now = Date.now();
-          if (payload === this.lastPayload && now - this.lastPayloadAt < this.duplicateWindowMs) return;
-          this.lastPayload = payload;
-          this.lastPayloadAt = now;
-          this.onResult({ id: this.createId(), payload, scannedAt: new Date(now).toISOString(), format: String(result.getBarcodeFormat?.() || 'QR_CODE') });
-        });
+        try {
+          this.controls = await this.reader.decodeFromVideoDevice(deviceId, this.video, onDecoded);
+        } catch (error) {
+          // A remembered camera id can disappear after the phone rotates or
+          // switches cameras. Fall back to the default rear camera.
+          if (!deviceId || error?.name !== 'OverconstrainedError') throw error;
+          this.controls = await this.reader.decodeFromVideoDevice(undefined, this.video, onDecoded);
+        }
         this.onStatus('scanning');
         return this.controls;
       } catch (error) {
