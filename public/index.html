@@ -362,6 +362,8 @@
                     </svg>
                     <span data-i18n="refresh">Refresh</span>
                   </button>
+                  <button class="chip-btn" id="dashboard-scan" type="button" data-i18n="scan_code">Scan a code</button>
+                  <button class="chip-btn" id="dashboard-connect-phone" type="button" data-i18n="connect_phone">Connect phone</button>
                   <button class="chip-btn" id="dashboard-go-chat" type="button">
                     <svg
                       viewBox="0 0 24 24"
@@ -504,6 +506,8 @@
                     Clear
                   </button>
                 </form>
+                <button class="secondary-btn scan-open-btn" id="scan-open" type="button" data-i18n="scan_code">Scan a code</button>
+                <button class="secondary-btn scan-open-btn" id="module-connect-phone" type="button" data-i18n="connect_phone">Connect phone</button>
 
                 <div class="module-table-wrap" id="module-table-wrap" aria-live="polite"></div>
 
@@ -518,6 +522,48 @@
                 </div>
               </section>
         </div>
+
+        <dialog class="scanner-dialog" id="scanner-dialog" aria-labelledby="scanner-title">
+          <div class="scanner-panel">
+            <div class="scanner-heading">
+              <div><h2 id="scanner-title">Scan a product or record code</h2><p id="scanner-help">Select the D365 model first.</p></div>
+              <button class="icon-btn" id="scan-close" type="button" aria-label="Close scanner">×</button>
+            </div>
+            <label for="scan-model">Model</label>
+            <select id="scan-model"></select>
+            <video id="scanner-video" playsinline muted></video>
+            <p id="scanner-status" role="status" aria-live="polite">Camera access requires HTTPS on your phone.</p>
+            <button class="secondary-btn" id="scan-start" type="button">Start camera</button>
+          </div>
+        </dialog>
+
+        <dialog class="device-dialog" id="device-connection-dialog" aria-labelledby="device-dialog-title">
+          <div class="device-panel">
+            <header class="device-heading">
+              <div><h2 id="device-dialog-title">Connect a phone</h2><p id="device-dialog-subtitle">Use your phone camera to send QR results here.</p></div>
+              <button class="icon-btn" id="device-dialog-close" type="button" aria-label="Close">×</button>
+            </header>
+            <label for="device-model" id="device-model-label">D365 model for scanned codes</label>
+            <select id="device-model"></select>
+            <p class="device-instructions" id="device-instructions">Phone A provides the hotspot. Connect the laptop and Phone B to it, then scan this pairing QR with Phone B.</p>
+            <div class="pairing-panel" id="pairing-panel" hidden>
+              <img id="pairing-qr" alt="Phone pairing QR code" />
+              <div><strong id="device-session-status" role="status" aria-live="polite">Waiting for phone</strong><span id="device-countdown"></span><span id="device-label"></span></div>
+            </div>
+            <div class="device-manual-link" id="device-manual-link" hidden>
+              <label for="device-pairing-url" id="device-link-label">Or open this pairing link on the phone</label>
+              <div><input id="device-pairing-url" type="url" readonly /><button class="secondary-btn" id="device-copy-link" type="button">Copy link</button></div>
+            </div>
+            <div class="device-latest" id="device-latest" hidden>
+              <h3 id="device-result-heading">Latest scan</h3><pre id="device-result-value"></pre>
+              <button class="text-btn" id="device-copy-result" type="button">Copy result</button>
+            </div>
+            <div class="device-actions">
+              <button class="secondary-btn" id="device-cancel" type="button" hidden>Cancel connection</button>
+              <button class="primary-btn" id="device-start-session" type="button">Create pairing QR</button>
+            </div>
+          </div>
+        </dialog>
 
         <div class="view chat-view" id="chat-view" role="region" aria-labelledby="view-title" hidden>
           <section
@@ -633,6 +679,7 @@
 
     <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
+    <script src="./zxing-browser.min.js" defer></script>
     <script src="./app.js" defer></script>
   </body>
 </html>

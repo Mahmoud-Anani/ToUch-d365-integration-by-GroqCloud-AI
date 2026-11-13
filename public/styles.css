@@ -2971,6 +2971,48 @@ circle.donut-seg.seg-6 {
   margin-top: 14px;
 }
 
+.scanner-dialog {
+  width: min(560px, calc(100vw - 28px));
+  max-width: none;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.scanner-dialog::backdrop { background: rgba(14, 25, 20, .66); }
+.scanner-panel { display: grid; gap: 12px; padding: 20px; }
+.scanner-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.scanner-heading h2 { margin: 0; font-size: 19px; }
+.scanner-heading p, #scanner-status { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+.scanner-panel label { font-size: 13px; font-weight: 650; }
+.scanner-panel select { width: 100%; min-height: 42px; padding: 8px 10px; border: 1px solid var(--border-strong); border-radius: 9px; color: var(--text); background: var(--surface); }
+#scanner-video { width: 100%; max-height: 55vh; aspect-ratio: 4 / 3; border-radius: 12px; background: #101714; object-fit: cover; }
+.scan-open-btn { justify-self: start; margin: 10px 0; }
+.device-dialog { width:min(640px,calc(100vw - 28px)); max-width:none; max-height:calc(100dvh - 24px); overflow:auto; padding:0; border:1px solid var(--border); border-radius:18px; color:var(--text); background:var(--surface); box-shadow:var(--shadow-soft); }
+.device-dialog::backdrop { background:rgba(14,25,20,.66); }
+.device-panel { display:grid; gap:13px; padding:20px; }
+.device-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.device-heading h2 { margin:0; font-size:20px; }
+.device-heading p,.device-instructions { margin:5px 0 0; color:var(--muted); font-size:13px; line-height:1.5; }
+.device-panel>label { font-size:13px; font-weight:650; }
+.device-panel select { min-height:42px; padding:8px 10px; border:1px solid var(--border-strong); border-radius:9px; color:var(--text); background:var(--surface); }
+.pairing-panel { display:flex; align-items:center; gap:16px; padding:12px; border:1px solid var(--border); border-radius:12px; }
+.pairing-panel img { width:min(42vw,190px); height:auto; border-radius:8px; background:#fff; }
+.pairing-panel div { display:grid; gap:7px; min-width:0; }
+.pairing-panel span { color:var(--muted); font-size:12px; overflow-wrap:anywhere; }
+.device-manual-link { display:grid; gap:6px; }
+.device-manual-link label { color:var(--muted); font-size:12px; }
+.device-manual-link div { display:flex; gap:8px; }
+.device-manual-link input { flex:1; min-width:0; padding:8px; border:1px solid var(--border); border-radius:8px; color:var(--text); background:var(--surface); font-size:11px; }
+.device-latest { padding:12px; border-radius:10px; background:var(--surface-2); }
+.device-latest h3 { margin:0 0 6px; font-size:13px; }
+.device-latest pre { max-height:130px; overflow:auto; margin:0 0 8px; white-space:pre-wrap; overflow-wrap:anywhere; font:12px/1.5 ui-monospace,Consolas,monospace; }
+.device-actions { display:flex; justify-content:flex-end; gap:9px; }
+@media(max-width:560px) { .pairing-panel { align-items:flex-start; flex-direction:column; } .pairing-panel img { width:min(70vw,240px); align-self:center; } }
+
 .module-card {
   display: flex;
   min-width: 0;

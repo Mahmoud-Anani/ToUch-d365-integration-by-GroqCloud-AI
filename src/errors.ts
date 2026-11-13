@@ -17,6 +17,7 @@ export type ErrorCode =
   | 'AI_CONTEXT_LENGTH'
   | 'AI_INVALID_RESPONSE'
   | 'TOOL_ERROR'
+  | 'CONFLICT'
   | 'INTERNAL_ERROR';
 
 export class AppError extends Error {
@@ -70,6 +71,13 @@ export class NotFoundError extends AppError {
   constructor(message = 'The requested resource was not found.') {
     super({ status: 404, code: 'NOT_FOUND', publicMessage: message });
     this.name = 'NotFoundError';
+  }
+}
+
+export class ConflictError extends AppError {
+  constructor(message: string) {
+    super({ status: 409, code: 'CONFLICT', publicMessage: message });
+    this.name = 'ConflictError';
   }
 }
 

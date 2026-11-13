@@ -729,7 +729,7 @@ export class DashboardService {
 
   async records(
     id: string,
-    options: { search?: string; top?: number; skip?: number } = {},
+    options: { search?: string; top?: number; skip?: number; scan?: boolean } = {},
   ): Promise<ModuleRecords> {
     const module = findDashboardModule(id);
     if (!module) throw new NotFoundError('Dashboard module was not found.');
@@ -738,7 +738,14 @@ export class DashboardService {
     if (search.length > MAX_SEARCH_LENGTH) {
       throw new ValidationError(`Search text must be at most ${MAX_SEARCH_LENGTH} characters.`);
     }
-    if (search && !module.searchField) {
+    const scanFields = options.scan ? (module.scanFields ?? []) : [];
+    if (options.scan && scanFields.length === 0) {
+      throw new ValidationError('This module does not support code scanning.');
+    }
+    if (options.scan && !search) {
+      throw new ValidationError('A scanned code is required.');
+    }
+    if (search && !module.searchField && scanFields.length === 0) {
       throw new ValidationError('This module does not support text search.');
     }
 
@@ -764,17 +771,23 @@ export class DashboardService {
     // integration-map entities, so searched queries scan a bounded,
     // server-ordered page set and filter in memory. The search field must
     // therefore always be part of the selection.
-    if (search && entity && module.searchField) {
-      const searchProperty = entity.properties.find(
-        (property) => property.name.toLowerCase() === (module.searchField as string).toLowerCase(),
-      );
-      if (!searchProperty) {
-        throw new ValidationError('This module does not support text search.');
+    let matchFields = scanFields.length > 0 ? scanFields : module.searchField ? [module.searchField] : [];
+    if (search && entity && matchFields.length > 0) {
+      const resolvedMatchFields: string[] = [];
+      for (const matchField of matchFields) {
+        const searchProperty = entity.properties.find(
+          (property) => property.name.toLowerCase() === matchField.toLowerCase(),
+        );
+        if (!searchProperty) {
+          throw new ValidationError('This module does not support text search.');
+        }
+        resolvedMatchFields.push(searchProperty.name);
+        const alreadySelected = select.some(
+          (field) => field.toLowerCase() === searchProperty.name.toLowerCase(),
+        );
+        if (!alreadySelected) select = [...select, searchProperty.name];
       }
-      const alreadySelected = select.some(
-        (field) => field.toLowerCase() === searchProperty.name.toLowerCase(),
-      );
-      if (!alreadySelected) select = [...select, searchProperty.name];
+      matchFields = resolvedMatchFields;
     }
 
     const query = await this.options.queryBuilder.validate({
@@ -793,8 +806,7 @@ export class DashboardService {
       return { name, kind: property ? propertyKind(property.type) : 'unknown' };
     });
 
-    if (search && module.searchField) {
-      const searchField = module.searchField;
+    if (search && matchFields.length > 0) {
       const scan = await this.options.client.fetchAllPages(
         query.entity.entitySet,
         this.options.queryBuilder.toScanParams(query),
@@ -804,11 +816,10 @@ export class DashboardService {
         },
       );
       const needle = search.toLowerCase();
-      const filtered = scan.rows.filter((row) =>
-        String(row?.[searchField] ?? '')
-          .toLowerCase()
-          .includes(needle),
-      );
+      const filtered = scan.rows.filter((row) => matchFields.some((field) => {
+        const value = String(row?.[field] ?? '').toLowerCase();
+        return options.scan ? value === needle : value.includes(needle);
+      }));
       const page = filtered.slice(skip, skip + top);
       return {
         module: {

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en" dir="ltr" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f5f7f4" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>Touch | Mobile QR Scanner</title>
+    <link rel="stylesheet" href="/mobile-scan.css" />
+    <script src="/zxing-browser.min.js" defer></script>
+    <script src="/connection-provider.js" defer></script>
+    <script src="/qr-scanner.js" defer></script>
+    <script src="/mobile-scanner.js" defer></script>
+  </head>
+  <body>
+    <main class="phone-shell">
+      <header class="phone-header">
+        <img src="/touch-logo.png" alt="Touch" width="78" height="42" />
+        <div><h1 id="title">Mobile QR scanner</h1><p id="subtitle">Connecting to your laptop…</p></div>
+      </header>
+      <div id="connection-status" class="connection-status" role="status" aria-live="polite">Connecting</div>
+      <section class="scanner-card" aria-label="QR scanner">
+        <div class="video-frame">
+          <video id="camera-preview" playsinline muted></video>
+          <div class="finder-frame" aria-hidden="true"></div>
+          <div id="camera-placeholder" class="camera-placeholder">Camera is off</div>
+        </div>
+        <p id="feedback" class="feedback" role="status" aria-live="polite">Allow camera access to begin scanning.</p>
+        <div class="camera-actions">
+          <button id="camera-start" class="primary" type="button">Start scanning</button>
+          <button id="camera-stop" class="secondary" type="button" hidden>Stop</button>
+        </div>
+        <div class="camera-tools">
+          <label id="camera-label" for="camera-select" hidden>Camera</label>
+          <select id="camera-select" hidden aria-label="Choose camera"></select>
+          <button id="torch-toggle" class="secondary" type="button" hidden>Turn on light</button>
+        </div>
+        <form id="manual-form" class="manual-form">
+          <label id="manual-label" for="manual-code">Enter code manually</label>
+          <div><input id="manual-code" type="text" maxlength="2048" autocomplete="off" /><button class="secondary" type="submit">Send</button></div>
+        </form>
+        <button id="retry-send" class="secondary full-width" type="button" hidden>Retry sending scan</button>
+      </section>
+      <section class="last-result" aria-live="polite">
+        <h2 id="last-label">Latest scan</h2>
+        <pre id="last-value">No code scanned yet</pre>
+      </section>
+      <button id="disconnect" class="disconnect" type="button">Disconnect phone</button>
+      <p class="privacy-note" id="privacy-note">Scanned content is sent to your paired laptop. Links are never opened automatically.</p>
+    </main>
+  </body>
+</html>

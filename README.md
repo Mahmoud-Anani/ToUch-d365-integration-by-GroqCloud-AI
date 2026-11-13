@@ -233,7 +233,10 @@ identify incomplete or stale information.
 
 | Variable                      | Default                   | Description                                                                                                                             |
 | ----------------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `PORT` / `HOST`               | `3000` / `127.0.0.1`      | Listener port and host. The default is local-only; only set a network interface when access is protected by a trusted network boundary. |
+| `PORT` / `HOST`               | `3000` / `0.0.0.0`        | Listener port and LAN bind address for the Phone A hotspot workflow. Restrict inbound firewall access to the trusted hotspot network. |
+| `HTTPS_KEY_FILE` / `HTTPS_CERT_FILE` | unset              | Matching PEM key and certificate files for direct local HTTPS and WSS. Both must be set together. |
+| `SESSION_COOKIE_SECURE`       | `true` with local HTTPS    | Send the laptop login cookie over HTTPS only. |
+| `DEVICE_CONNECTION_LAN_IP`    | auto-detected             | Optional private IPv4 address assigned to the laptop on Phone A's hotspot. Use it when the laptop has multiple LAN adapters. |
 | `NODE_ENV`                    | `development`             | Environment mode.                                                                                                                       |
 | `APP_TRUST_USER_HEADER`       | `false`                   | Trust `X-User-Id` only behind a trusted identity-aware reverse proxy.                                                                   |
 | `TRUST_PROXY`                 | `false`                   | Trust the first proxy hop for request IP/rate limiting; configure only behind a trusted proxy.                                          |
@@ -310,7 +313,143 @@ Endpoints:
 | `DELETE` | `/api/conversations/:id`                    | Delete an owned conversation.                                          |
 | `POST`   | `/api/chat`                                 | Submit a question and wait for its response.                           |
 | `POST`   | `/api/chat/stream`                          | SSE progress events followed by the final response or an error.        |
+| `POST`   | `/api/device-connections/sessions`          | Create an owner-bound phone pairing session and LAN-IP QR code.         |
+| `GET`    | `/api/device-connections/sessions/:id`      | Read a session owned by the signed-in laptop user.                      |
+| `DELETE` | `/api/device-connections/sessions/:id`      | Cancel an owned pairing session.                                        |
+| `POST`   | `/api/device-connections/sessions/:id/pair` | Exchange a one-time QR token for a mobile WebSocket token.               |
+| `WS`     | `/api/device-connections/sessions/:id/socket` | Authenticated laptop connection for scan/status events and replay.      |
+| `WS`     | `/api/device-connections/sessions/:id/mobile-socket` | Authenticated Phone B scan upload and acknowledgements.          |
 | `GET`    | `/api/users`                                | Legacy compatibility route for the original D365 users endpoint.       |
+
+### Connect a phone
+
+The desktop interface has **Connect phone**. Select a scannable D365 model and
+create a pairing QR. Phone A only supplies the hotspot; connect the laptop and
+Phone B to it. The laptop serves the app on its private hotspot IPv4 and port.
+Phone B scans the pairing QR, opens the mobile scanner in its browser, and then
+scans business QR codes. Each scan goes over an authenticated WebSocket and
+opens the selected D365 model's results on the laptop. Laptop and phone sockets
+reconnect automatically, with event replay and scan acknowledgements to avoid
+losing a scan when the connection drops.
+
+Sessions use in-memory storage, expire after five minutes by default, and are
+invalidated by a server restart. Configure `DEVICE_CONNECTION_SESSION_TTL_MS`
+(60 seconds to one hour) and `DEVICE_CONNECTION_MAX_SESSIONS_PER_USER` if needed.
+The phone-scanning page is available at `/device-scan/:sessionId` without a
+login cookie. Pairing uses a one-time secret in the URL fragment, then a
+per-device token authenticates Phone B's WebSocket. The laptop's WebSocket
+requires the signed-in session cookie and ownership of the session. Sessions
+remain in memory and are invalidated by a server restart.
+
+#### Phone A hotspot and trusted HTTPS setup
+
+Phone camera access requires HTTPS, and the certificate must be trusted by
+Phone B. For a fully local setup, install [mkcert](https://github.com/FiloSottile/mkcert)
+on the laptop before going offline, connect it to Phone A's hotspot, and find the laptop IPv4 shown
+for that hotspot adapter in the operating system's network settings. Then run:
+
+```powershell
+.\scripts\setup-mobile-hotspot.ps1 -LanIp 192.168.137.23
+```
+
+Replace the example address with the laptop's actual hotspot IPv4. The script
+creates a certificate containing that IP and updates only the `HOST`, TLS-file,
+`SESSION_COOKIE_SECURE`, and `DEVICE_CONNECTION_LAN_IP` entries in `.env`. Restart the app, then allow
+Node through the laptop firewall on the private hotspot network for `PORT`
+(3000 by default). Do not expose that port on public networks.
+
+On Windows, if the hotspot adapter is blocked, run this in an elevated
+PowerShell window, replacing the LAN address if needed:
+
+```powershell
+New-NetFirewallRule -DisplayName "Touch phone scanner hotspot" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 3000 -LocalAddress 192.168.137.23 -RemoteAddress LocalSubnet -Profile Any
+```
+
+This scopes the rule to the laptop's hotspot address and local subnet. Remove
+it after use with `Remove-NetFirewallRule -DisplayName "Touch phone scanner hotspot"`.
+
+The script prints mkcert's CA directory. Copy only `rootCA.pem` to Phone B and
+install/trust that CA using the phone's certificate settings; never copy
+`rootCA-key.pem`. iOS requires installing the profile and enabling full trust.
+Android/browser trust behavior depends on device policy and browser version. If
+Phone B does not trust the certificate, camera access and secure WebSockets
+will fail. Re-run the script if the hotspot assigns the laptop a different IP.
+
+Start the app normally and open `https://<laptop-hotspot-ip>:<PORT>` on the
+laptop. It binds to `0.0.0.0`, and the pairing QR uses the configured or
+auto-detected private LAN IPv4 plus `PORT`, for example
+`https://192.168.137.23:3000/device-scan/...`. Connect Phone B to Phone A's
+hotspot, scan the QR, grant camera permission, and press **Start scanning**.
+The workflow uses no internet, public deployment, tunnel, cloud relay, or
+Bluetooth. The laptop firewall must permit the application port on the private
+hotspot network. The server reports connection and scan state on the laptop;
+Phone B reports pairing, reconnect, permission, and scan status in its page.
+The scan and pairing transport stays on the hotspot. Loading live ERP records
+still depends on the application's configured D365 connection.
+
+If Phone B cannot load the scanner page or the laptop shows repeated reconnects,
+confirm both phones/laptop are on Phone A's hotspot, the certificate includes
+the current laptop IP and is trusted on Phone B, and the firewall rule matches
+that IP/port. Some hotspot firmware blocks traffic between connected clients;
+disable client isolation on Phone A if it offers that setting. Expired sessions
+must be replaced by creating a fresh pairing QR on the laptop.
+
+Pairing sessions expire after five minutes by default, accept only bounded
+payloads, store token hashes server-side, and are cancelled on server restart.
+`DEVICE_CONNECTION_SESSION_TTL_MS` and
+`DEVICE_CONNECTION_MAX_SESSIONS_PER_USER` control expiry and per-user limits.
+The session/event store is in-memory and single-process.
+
+#### Manual device checklist
+
+1. Enable Phone A's hotspot, connect the laptop and Phone B, then open the app
+   on the laptop using its hotspot IPv4 over trusted HTTPS.
+2. On the laptop create a pairing QR. Scan it with Phone B, allow camera access,
+   scan two different codes, and verify results open in the selected module.
+3. Briefly disconnect and reconnect Phone B to the hotspot, retry a pending
+   scan, and confirm both WebSockets recover without losing the scan.
+4. Test denied camera permission and manual code entry.
+5. Repeat on iOS Safari over the trusted HTTPS origin. If camera access or
+   local certificate trust is unavailable, use manual entry or another
+   supported browser/device.
+6. Cancel and expire a session, then confirm its pairing QR and mobile token
+   cannot submit further scans.
+
+### Local MCP integration
+
+The project includes a local MCP server over stdio, backed by its existing
+read-only D365 tools. It does not need an `MCP_SERVERS` variable or another
+MCP service. Configure D365 in `.env` and add this server to the MCP client's
+local server configuration (replace the project path):
+
+```json
+{
+  "mcpServers": {
+    "touch-d365-local": {
+      "command": "npm",
+      "args": [
+        "--silent",
+        "--prefix",
+        "C:\\path\\to\\this\\project",
+        "run",
+        "mcp"
+      ]
+    }
+  }
+}
+```
+
+The command builds the project and launches its local stdio MCP server. It
+exposes the same validated read-only tools used by the assistant.
+
+### Scan codes with a phone
+
+Open a searchable system module and select **Scan a code**. Choose the D365
+model before starting the camera. A successfully read barcode or QR code is
+used as the module search and opens that module's results page. On a phone,
+open the project through its HTTPS address on the same network; browsers do not
+grant camera access to an ordinary HTTP LAN address. Camera access is requested
+only after the user presses **Start camera**.
 
 Chat request:
 

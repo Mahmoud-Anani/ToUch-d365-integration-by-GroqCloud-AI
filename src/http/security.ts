@@ -12,7 +12,7 @@ const CSP = [
   "img-src 'self' data:",
   "style-src 'self'",
   "script-src 'self'",
-  "connect-src 'self'",
+  "connect-src 'self' ws: wss:",
   "font-src 'self'",
 ].join('; ');
 
@@ -24,7 +24,7 @@ export function securityHeaders(config: AppConfig): RequestHandler {
     res.setHeader('Referrer-Policy', 'no-referrer');
     res.setHeader(
       'Permissions-Policy',
-      'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+      'camera=(self), microphone=(), geolocation=(), payment=(), usb=()',
     );
     res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
     res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
