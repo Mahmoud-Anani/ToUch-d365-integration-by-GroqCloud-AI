@@ -3,10 +3,12 @@ import type { AppConfig } from '../config';
 import type { Logger } from '../logger';
 import { NotFoundError, ValidationError } from '../errors';
 import type { Agent, AgentResult } from '../ai/agent';
-import type { DataContextEntry } from '../ai/attachments';
+import type { Attachment, DataContextEntry, SourceReference } from '../ai/attachments';
+import { friendlyLabel } from '../ai/business';
 import type { ConversationStore } from './store';
 import { DEFAULT_TITLE, normaliseTitle } from './store';
 import type {
+  ChatMessageMeta,
   ChatMessageRecord,
   ConversationRecord,
   ConversationSummary,
@@ -80,23 +82,147 @@ function mergeDataContext(
   return merged.length > 0 ? merged : undefined;
 }
 
+/**
+ * The browser is a decision surface, not a diagnostics console. Full ERP
+ * evidence, tool telemetry and source identifiers stay server-side; only
+ * business-readable tables, metrics and a partial-data flag are published.
+ */
+function publicMeta(meta: ChatMessageMeta | undefined): ChatMessageMeta | undefined {
+  if (meta?.complete === false) return { complete: false };
+  return undefined;
+}
+
+function safeDisplayText(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  const base = value.split('·')[0]!.trim();
+  // Legacy attachments can embed source identifiers after a separator or as a
+  // camel-cased technical name. Neither belongs in a business answer.
+  if (/(?:[A-Z][a-z]+){2,}|V\d+|[A-Z]{3,}/.test(base)) return 'Business summary';
+  return base;
+}
+
+function publicAttachments(attachments: Attachment[] | undefined): Attachment[] | undefined {
+  if (!attachments || attachments.length === 0) return undefined;
+  return attachments.map((attachment) => {
+    const subtitle = safeDisplayText(attachment.subtitle);
+    if (attachment.type === 'table') {
+      return {
+        ...attachment,
+        entitySet: undefined,
+        title: safeDisplayText(attachment.title) ?? 'Business records',
+        ...(subtitle ? { subtitle } : {}),
+        columns: attachment.columns.map((column) => ({
+          ...column,
+          label: friendlyLabel(column.label),
+        })),
+      };
+    }
+    if (attachment.type === 'metric') {
+      return {
+        ...attachment,
+        title: safeDisplayText(attachment.title) ?? 'Business summary',
+        ...(subtitle ? { subtitle } : {}),
+        items: attachment.items.map((item) => ({
+          ...item,
+          label: friendlyLabel(item.label),
+          ...(item.hint ? { hint: safeDisplayText(item.hint) ?? '' } : {}),
+        })),
+      };
+    }
+    return {
+      ...attachment,
+      title: safeDisplayText(attachment.title) ?? 'Business summary',
+      ...(subtitle ? { subtitle } : {}),
+    };
+  });
+}
+
+function businessSourceName(operation: string | undefined): string {
+  const value = (operation ?? '').toLowerCase();
+  if (value.includes('return')) return 'Return records';
+  if (value.includes('inventory')) return 'Inventory records';
+  if (value.includes('sales')) return 'Sales records';
+  if (value.includes('supplier')) return 'Supplier records';
+  if (value.includes('customer')) return 'Customer records';
+  if (value.includes('product')) return 'Product records';
+  if (value.includes('purchase')) return 'Purchase records';
+  if (value.includes('production')) return 'Production records';
+  return 'Business records';
+}
+
+/** Keep only business-readable notes; internal routing and model instructions stay server-side. */
+function publicNote(note: string): string | undefined {
+  const text = note.trim();
+  const lower = text.toLowerCase();
+  if (lower.includes('no records matched')) return 'No records matched this request.';
+  if (lower.includes('no rows matched')) return 'No records matched this request.';
+  if (lower.includes('no records were returned by the verified master')) {
+    return 'No supplier, customer or product records were returned by the verified source.';
+  }
+  if (lower.includes('no records were found in the last')) return text;
+  if (
+    lower.includes('did not accept the requested server-side filter') ||
+    lower.includes('bounded portion of matching records')
+  ) {
+    return 'Figures come from a partial review of available records.';
+  }
+  if (lower.startsWith('analysis covers')) {
+    const period = text.match(/analysis covers (.+?)(?: by default)?(?:;|$)/i)?.[1];
+    return period ? `Figures cover ${period}.` : undefined;
+  }
+  if (lower.startsWith('figures are based on the exact records')) {
+    return 'Figures reflect only the records retrieved.';
+  }
+  if (lower.startsWith('resolved the product name')) return text;
+  if (lower.startsWith('showing the top')) return text;
+  if (lower.includes('point-in-time snapshot')) return text;
+  if (lower.includes('real erp records were retrieved')) return text;
+  if (lower.includes('bounded portion of available records was reviewed')) {
+    return 'Results come from a partial review of available records.';
+  }
+  return undefined;
+}
+
+function publicSources(sources: SourceReference[] | undefined): SourceReference[] | undefined {
+  if (!sources || sources.length === 0) return undefined;
+  return sources.map((source) => {
+    const name = businessSourceName(source.operation);
+    const publicNotes = source.notes
+      ?.map(publicNote)
+      .filter((note): note is string => Boolean(note))
+      .filter((note, index, notes) => notes.indexOf(note) === index);
+    return {
+      entitySet: name,
+      entityType: name,
+      operation: 'Business records checked',
+      rowsReturned: source.rowsReturned,
+      ...(source.totalMatches !== undefined ? { totalMatches: source.totalMatches } : {}),
+      complete: source.complete,
+      ...(publicNotes && publicNotes.length > 0 ? { notes: publicNotes } : {}),
+    };
+  });
+}
+
 function toPublic(conversation: ConversationRecord): PublicConversation {
   return {
     id: conversation.id,
     title: conversation.title,
     createdAt: conversation.createdAt,
     updatedAt: conversation.updatedAt,
-    messages: conversation.messages.map((message) => ({
-      id: message.id,
-      role: message.role,
-      content: message.content,
-      createdAt: message.createdAt,
-      ...(message.attachments && message.attachments.length > 0
-        ? { attachments: message.attachments }
-        : {}),
-      ...(message.sources && message.sources.length > 0 ? { sources: message.sources } : {}),
-      ...(message.meta ? { meta: message.meta } : {}),
-    })),
+    messages: conversation.messages.map((message) => {
+      const safeMeta = publicMeta(message.meta);
+      const safeAttachments = publicAttachments(message.attachments);
+      const safeSources = publicSources(message.sources);
+      return {
+        id: message.id,
+        role: message.role,
+        content: message.content,
+        createdAt: message.createdAt,
+        ...(safeAttachments ? { attachments: safeAttachments } : {}),
+        ...(safeSources ? { sources: safeSources } : {}),
+        ...(safeMeta ? { meta: safeMeta } : {}),
+      };
+    }),
   };
 }
 

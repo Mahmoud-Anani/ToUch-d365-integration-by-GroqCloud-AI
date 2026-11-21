@@ -19,6 +19,8 @@ const STOPWORDS = new Set([
   'عندي', 'عندنا', 'اللي', 'التي', 'الذي', 'هو', 'هي', 'ما', 'ماذا', 'اعرض', 'اعرضلي',
   'عرض', 'عرضلي', 'عايز', 'عاوز', 'ممكن', 'لو', 'سمحت', 'حسب', 'مع', 'او', 'أو', 'و',
   'ثم', 'موجود', 'الموجودة', 'الموجود', 'لي', 'لنا', 'داخل', 'بين', 'علي',
+  // Intent words are not metadata terms.
+  'قائمه', 'قايمه', 'قائمة', 'القائمه', 'القايمه', 'القائمة', 'قوائم', 'اريد', 'اريده', 'اريدها',
 ]);
 
 const SYNONYMS: Record<string, string[]> = {
@@ -38,6 +40,11 @@ const SYNONYMS: Record<string, string[]> = {
   موردين: ['vendor'],
   المورد: ['vendor'],
   الموردين: ['vendor'],
+  بالمورد: ['vendor'],
+  بالموردين: ['vendor'],
+  للمورد: ['vendor'],
+  للموردين: ['vendor'],
+  بالموردي: ['vendor'],
   product: ['product', 'item'],
   products: ['product', 'item'],
   item: ['product', 'item'],
@@ -142,8 +149,15 @@ function tokenize(value: string): string[] {
   return normalized
     .split(' ')
     .map((token) => {
-      if (token.length > 3 && token.startsWith('ال')) return token.slice(2);
-      return token;
+      if (token.length <= 3 || !/[\u0600-\u06ff]/.test(token)) return token;
+      let value = token;
+      if (value.startsWith('لل')) {
+        value = value.slice(2);
+      } else if (/[بلكفو]/.test(value[0] ?? '')) {
+        value = value.slice(1);
+      }
+      if (value.length > 3 && value.startsWith('ال')) value = value.slice(2);
+      return value || token;
     })
     .filter((token) => token.length > 0);
 }

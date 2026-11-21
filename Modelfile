@@ -1,0 +1,8 @@
+# Local Ollama model used by the Touch El-Zanouki D365 F&O assistant.
+# Points at the existing GGUF file on this machine. Ollama stores blobs by
+# content hash, so registering this name does not duplicate the GGUF file.
+FROM C:/Users/localadmin/Desktop/ollama/Qwen3.5-4B-Q4_K_M.gguf
+
+# The GGUF advertises a 262k context window. Bound the default KV cache to a
+# practical size for a 4B local model; OLLAMA_NUM_CTX can override per request.
+PARAMETER num_ctx 32768

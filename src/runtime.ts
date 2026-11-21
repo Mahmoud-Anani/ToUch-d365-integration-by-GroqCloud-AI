@@ -7,10 +7,9 @@ import { MetadataService } from './metadata/service';
 import { QueryBuilder } from './query/builder';
 import { AnalyticsEngine } from './analytics/analytics';
 import { ToolRegistry } from './ai/tools';
-import { OpenAICompatibleProvider } from './ai/groq';
-import { AIService, type AIServiceStatus } from './ai/fallback';
+import { OllamaProvider } from './ai/ollama';
 import { Agent } from './ai/agent';
-import type { AIProvider } from './ai/types';
+import type { AIProvider, AIStatus } from './ai/types';
 import type { MetadataCatalogData } from './metadata/types';
 import { createConversationStore, type ConversationStore } from './chat/store';
 import { ChatService } from './chat/service';
@@ -36,7 +35,7 @@ export interface AppServices {
   analytics: AnalyticsEngine;
   tools: ToolRegistry;
   agent: Agent;
-  aiStatus: () => AIServiceStatus;
+  aiStatus: () => AIStatus | Promise<AIStatus>;
   chat: ChatService;
   conversationStore: ConversationStore;
   users: UserStore;
@@ -150,34 +149,36 @@ export function createRuntime(config: AppConfig, options: RuntimeOptions = {}): 
     searchPageSize: config.d365.pageSize,
   });
 
-  const configuredProviders = config.ai.providers.map(
-    (provider) =>
-      new OpenAICompatibleProvider({
-        ...provider,
-        temperature: config.ai.temperature,
-        timeoutMs: config.ai.timeoutMs,
-        maxCompletionTokens: config.ai.maxCompletionTokens,
-        capabilities: {
-          supportsTools: provider.supportsTools,
-          tasks: provider.tasks,
-          freeTier: provider.freeTier,
-          ...(provider.contextWindow ? { contextWindow: provider.contextWindow } : {}),
-        },
-        ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
-        logger,
-      }),
-  );
-  const aiService = new AIService(
-      configuredProviders,
-      {
-        fallbackEnabled: config.ai.fallbackEnabled,
-        cooldownMs: config.ai.providerCooldownMs,
-        maxCooldownMs: config.ai.providerMaxCooldownMs,
-        primaryProvider: config.ai.primaryProvider,
-      },
-      logger,
-    );
-  const provider = options.aiProvider ?? aiService;
+  const localProvider = new OllamaProvider({
+    baseUrl: config.ai.baseUrl,
+    model: config.ai.model,
+    temperature: config.ai.temperature,
+    timeoutMs: config.ai.timeoutMs,
+    maxCompletionTokens: config.ai.maxCompletionTokens,
+    numCtx: config.ai.numCtx,
+    thinking: config.ai.thinking,
+    maxPromptChars: config.ai.maxPromptChars,
+    publicModelLabel: config.ai.modelLabel,
+    capabilities: {
+      supportsTools: true,
+      tasks: config.ai.providers[0]!.tasks,
+      freeTier: 'verified',
+      contextWindow: config.ai.numCtx,
+    },
+    ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
+    logger,
+  });
+  const provider = options.aiProvider ?? localProvider;
+  const genericStatus: AIStatus = {
+    configured: true,
+    available: true,
+    model: config.ai.modelLabel,
+    requests: 0,
+    successfulRequests: 0,
+    failedRequests: 0,
+    totalTokens: 0,
+    averageResponseMs: 0,
+  };
 
   const agent = new Agent(provider, tools, config, logger);
 
@@ -206,14 +207,14 @@ export function createRuntime(config: AppConfig, options: RuntimeOptions = {}): 
     analytics,
     tools,
     agent,
-    aiStatus: () => aiService.status(),
+    aiStatus: () => provider.status?.() ?? genericStatus,
     chat,
     conversationStore,
     users,
     sessions,
     dashboard,
     deviceConnections,
-    aiConfigured: configuredProviders.length > 0 || options.aiProvider !== undefined,
+    aiConfigured: true,
     d365Configured,
     d365AuthMode: token.mode,
     startedAt: Date.now(),

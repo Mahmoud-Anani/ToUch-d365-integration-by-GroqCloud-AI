@@ -72,6 +72,22 @@ export interface ToolResultMessage {
 }
 
 /**
+ * Provider-agnostic health information safe to send to the browser. It never
+ * contains provider names, model identifiers, endpoints or file paths.
+ */
+export interface AIStatus {
+  configured: boolean;
+  available: boolean;
+  model: string;
+  requests: number;
+  successfulRequests: number;
+  failedRequests: number;
+  totalTokens: number;
+  averageResponseMs: number;
+  lastSuccessAt?: string;
+}
+
+/**
  * Provider-neutral AI interface. Business logic depends only on this contract,
  * so another provider can be added without touching the agent or chat modules.
  */
@@ -88,4 +104,6 @@ export interface AIProvider {
     options?: AIRequestOptions,
   ): Promise<AICompletion>;
   processToolResults(toolCalls: AIToolCall[], results: ToolResultMessage[]): AIMessage[];
+  /** Optional, browser-safe health snapshot for the health endpoint. */
+  status?(): Promise<AIStatus> | AIStatus;
 }

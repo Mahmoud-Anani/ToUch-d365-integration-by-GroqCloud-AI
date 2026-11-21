@@ -14,7 +14,7 @@ import { authMiddleware, requireSession } from './http/auth';
 import { createAuthRouter } from './http/auth-routes';
 import { RateLimiter, chatRateLimitMiddleware, rateLimitMiddleware } from './http/rate-limit';
 import { requestIdMiddleware, sameOriginGuard, securityHeaders } from './http/security';
-import type { AgentStatus } from './ai/status';
+import { publicStatus, type AgentStatus } from './ai/status';
 import type { PublicConversation } from './chat/types';
 import { findDashboardModule } from './dashboard/modules';
 import { discoverLanIpv4, isPrivateLanIpv4 } from './device-connections/network';
@@ -114,12 +114,12 @@ export function createApp(services: AppServices): Express {
   app.use(securityHeaders(config));
   app.use(express.json({ limit: config.requestBodyLimit, strict: true }));
 
-  app.get('/api/health', (req, res) => {
+  app.get('/api/health', asyncHandler(async (req, res) => {
     const metadata = services.metadata.status();
-    const aiStatus = services.aiStatus();
-    const aiAvailable =
-      aiStatus.providers.length === 0 || aiStatus.providers.some((provider) => provider.available);
-    const ready = metadata.loaded && services.aiConfigured && aiAvailable && services.d365Configured;
+    // Generic, browser-safe AI status: no provider names, model IDs or endpoints.
+    const aiStatus = await services.aiStatus();
+    const ready =
+      metadata.loaded && services.aiConfigured && aiStatus.available && services.d365Configured;
     res.json({
       application: 'Touch El-Zanouki Business Intelligence',
       status: ready ? 'ok' : 'degraded',
@@ -128,11 +128,8 @@ export function createApp(services: AppServices): Express {
       uptimeSeconds: Math.round((Date.now() - services.startedAt) / 1_000),
       readOnly: true,
       ai: {
-        configured: services.aiConfigured,
-        model:
-          aiStatus.providers.find((provider) => provider.name === aiStatus.activeProvider)?.model ??
-          services.agent.model,
         ...aiStatus,
+        configured: services.aiConfigured,
       },
       d365: {
         configured: services.d365Configured,
@@ -143,9 +140,15 @@ export function createApp(services: AppServices): Express {
         ...(metadata.lastError ? { lastError: 'Last metadata refresh failed.' } : {}),
       },
       authRequired: true,
-      warnings: config.warnings,
+      // Startup warnings are operational; AI/provider details stay server-side.
+      warnings: config.warnings.filter(
+        (warning) =>
+          !/ollama|AI_PROVIDER|AI_FALLBACK|GROQ|GEMINI|CEREBRAS|SAMBANOVA|OPENROUTER|HUGGINGFACE|cloud AI/i.test(
+            warning,
+          ),
+      ),
     });
-  });
+  }));
 
   const globalLimiter = new RateLimiter({
     windowMs: config.rateLimit.windowMs,
@@ -417,7 +420,9 @@ export function createApp(services: AppServices): Express {
         });
 
         const emitStatus = (update: AgentStatus): void => {
-          sendEvent(res, 'status', update);
+          // Progress is informational only. Never stream internal tool names,
+          // entity sets, fields or query details to the browser.
+          sendEvent(res, 'status', publicStatus(update));
         };
 
         const result = await services.chat.generate(prepared, {

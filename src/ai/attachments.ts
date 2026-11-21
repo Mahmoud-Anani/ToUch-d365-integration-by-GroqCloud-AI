@@ -114,6 +114,26 @@ export class AttachmentCollector {
 
   addAttachment(attachment: Attachment): void {
     if (this.attachments.length >= MAX_ATTACHMENTS) return;
+    // A forced pre-load and a model-initiated retry can read the same verified
+    // source twice. Deduplicate identical business tables so the browser never
+    // shows the same records more than once.
+    if (attachment.type === 'table') {
+      const signature = JSON.stringify([
+        attachment.title,
+        attachment.columns.map((column) => column.key),
+        attachment.rows,
+      ]);
+      const duplicate = this.attachments.some(
+        (item) =>
+          item.type === 'table' &&
+          JSON.stringify([
+            item.title,
+            item.columns.map((column) => column.key),
+            item.rows,
+          ]) === signature,
+      );
+      if (duplicate) return;
+    }
     let id = attachment.id;
     let counter = 2;
     while (this.attachments.some((item) => item.id === id)) {
@@ -147,6 +167,24 @@ export class AttachmentCollector {
   }
 
   addDataContext(entry: DataContextEntry): void {
+    const signature = JSON.stringify([
+      entry.entitySet,
+      entry.operation,
+      entry.select,
+      entry.rowsReturned,
+      entry.complete,
+    ]);
+    if (this.dataContext.some((item) =>
+      JSON.stringify([
+        item.entitySet,
+        item.operation,
+        item.select,
+        item.rowsReturned,
+        item.complete,
+      ]) === signature,
+    )) {
+      return;
+    }
     this.dataContext.unshift(entry);
     this.dataContext.splice(5);
   }

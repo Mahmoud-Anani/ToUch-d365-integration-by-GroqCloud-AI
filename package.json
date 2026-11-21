@@ -12,8 +12,9 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "smoke:d365": "tsx scripts/smoke-d365.ts",
-    "smoke:groq": "tsx scripts/smoke-groq.ts",
+    "smoke:d365": "node --use-system-ca --import tsx scripts/smoke-d365.ts",
+    "smoke:ollama": "tsx scripts/smoke-ollama.ts",
+    "eval:chats": "node --use-system-ca --import tsx scripts/eval-six-chats.ts",
     "hash-password": "tsx scripts/hash-password.ts"
   },
   "keywords": [
@@ -23,8 +24,8 @@
     "business-intelligence",
     "dynamics-365",
     "odata",
-    "groq",
-    "ai",
+    "ollama",
+    "local-ai",
     "erp"
   ],
   "author": "",

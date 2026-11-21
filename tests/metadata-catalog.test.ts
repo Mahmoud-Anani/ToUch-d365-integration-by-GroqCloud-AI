@@ -59,6 +59,9 @@ describe('MetadataCatalog search', () => {
   it('supports Arabic business terms', () => {
     expect(catalog.search('عملاء').map((result) => result.entitySet)).toContain('CustomersV3');
     expect(catalog.search('موردين').map((result) => result.entitySet)).toContain('VendorsV2');
+    expect(catalog.search('اريد قائمة بالموردين').map((result) => result.entitySet)).toContain(
+      'VendorsV2',
+    );
     expect(catalog.search('مخزون')[0]?.entitySet).toBe('InventoryOnHandForAI');
     expect(catalog.search('مستودعات').map((result) => result.entitySet)).toContain('Warehouses');
   });

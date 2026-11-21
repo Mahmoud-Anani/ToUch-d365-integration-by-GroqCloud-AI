@@ -128,15 +128,32 @@ describe('HTTP API with mandatory login', () => {
     expect(health.body.authRequired).toBe(true);
     expect(health.body.ai).toMatchObject({
       configured: true,
-      providers: [{ name: 'groq', requests: 0, successfulRequests: 0 }],
+      available: true,
+      model: 'AI assistant',
+      requests: 0,
     });
-    expect(JSON.stringify(health.body.ai)).not.toContain('test-groq-key');
+    expect(JSON.stringify(health.body.ai)).not.toMatch(/ollama|d365-local|127\.0\.0\.1|api[_-]?key/i);
 
     await request(app).get('/api/conversations').expect(401).expect('Content-Type', /json/);
     await request(app).get('/api/dashboard/modules').expect(401);
 
     const agent = await signIn(app, 'test');
     await agent.get('/api/conversations').expect(200);
+  });
+
+  it('keeps AI and provider warnings out of the public health payload', async () => {
+    const app = createApp(
+      createTestServices({
+        GROQ_API_KEY: 'legacy-key',
+        AI_PROVIDER: 'gemini',
+        AI_FALLBACK_PROVIDERS: '[{"name":"cloud","baseUrl":"https://api.example.com"}]',
+      }),
+    );
+
+    const health = await request(app).get('/api/health').expect(200);
+    expect(JSON.stringify(health.body)).not.toMatch(
+      /ollama|groq|gemini|cloud ai|fallback provider|AI_PROVIDER/i,
+    );
   });
 
   it('rejects invalid credentials without revealing which field failed', async () => {
@@ -150,24 +167,22 @@ describe('HTTP API with mandatory login', () => {
     expect(response.body.error.message).toBe('Invalid username or password.');
   });
 
-  it('uses a configured fallback provider when the primary key is absent', async () => {
-    const config = testConfig({
-      GROQ_API_KEY: undefined,
-      AI_FALLBACK_PROVIDERS: JSON.stringify([
-        {
-          name: 'backup',
-          apiKey: 'backup-key',
-          baseUrl: 'https://api.example.ai/v1',
-          model: 'backup-model',
-        },
-      ]),
-    });
+  it('exposes generic AI health without local identifiers', async () => {
+    const config = testConfig();
     const { logger } = testLogger();
-    const services = createRuntime(config, { initialCatalog: catalogData(), logger });
+    const aiProvider: AIProvider = {
+      name: 'test',
+      model: 'test-model',
+      generateResponse: async () => ({ content: 'ok', toolCalls: [] }),
+      generateWithTools: async () => ({ content: 'ok', toolCalls: [] }),
+      processToolResults: () => [],
+    };
+    const services = createRuntime(config, { initialCatalog: catalogData(), logger, aiProvider });
 
     expect(services.aiConfigured).toBe(true);
     const health = await request(createApp(services)).get('/api/health').expect(200);
-    expect(health.body.ai).toMatchObject({ configured: true, model: 'backup-model' });
+    expect(health.body.ai).toMatchObject({ configured: true, available: true });
+    expect(JSON.stringify(health.body.ai)).not.toMatch(/ollama|d365-local|127\.0\.0\.1|test-model/i);
   });
 
   it('isolates conversations per signed-in user', async () => {

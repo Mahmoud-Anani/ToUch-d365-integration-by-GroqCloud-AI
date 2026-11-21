@@ -10,7 +10,7 @@ Successfully enhanced the Touch El-Zanouki D365 Integration Dashboard with compr
 
 ### 1. Fixed Problems
 - [x] **No TypeScript errors** - Code compiles cleanly
-- [x] **No runtime issues** - All 269 tests pass
+- [x] **No runtime issues** - All 335 tests pass
 - [x] **No build warnings** - Production build successful
 - [x] **Lint clean** - ESLint passes with no errors
 
@@ -84,7 +84,7 @@ Successfully enhanced the Touch El-Zanouki D365 Integration Dashboard with compr
 
 ```
 ✅ Test Files: 15 passed (15)
-✅ Tests: 269 passed (269)
+✅ Tests: 335 passed (335)
 ✅ Duration: ~6s
 ✅ TypeScript: No errors
 ✅ ESLint: No errors
@@ -148,7 +148,7 @@ Successfully enhanced the Touch El-Zanouki D365 Integration Dashboard with compr
 The implementation is **production-ready** with:
 
 ### ✅ Quality Checks
-- [x] All tests passing (269/269)
+- [x] All tests passing (335/335)
 - [x] TypeScript compilation successful
 - [x] No ESLint warnings or errors
 - [x] Production build successful
@@ -218,7 +218,7 @@ npm run lint
 
 # 3. All tests
 npm test
-# Expected: 269 passed
+# Expected: 335 passed
 
 # 4. Build
 npm run build
@@ -273,9 +273,11 @@ D365_CLIENT_ID=your-client-id
 D365_CLIENT_SECRET=your-secret
 D365_TENANT_ID=your-tenant-id
 
-# AI provider (for chat features)
-GROQ_API_KEY=your-groq-key
-GROQ_MODEL=openai/gpt-oss-120b
+# AI provider (local Ollama; register with: ollama create d365-local -f Modelfile)
+AI_PROVIDER=ollama
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+OLLAMA_MODEL=d365-local
+OLLAMA_TIMEOUT=120000
 ```
 
 ### Performance Tuning
@@ -408,7 +410,7 @@ AI_MAX_GROUPS=100
 
 ### Technical Requirements ✅
 - [x] No TypeScript errors
-- [x] All tests passing (269/269)
+- [x] All tests passing (335/335)
 - [x] No breaking changes
 - [x] Backward compatible
 - [x] Production build successful

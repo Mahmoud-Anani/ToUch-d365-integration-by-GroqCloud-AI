@@ -53,6 +53,7 @@
       send: 'Send message',
       disclaimer: 'Touch Business Intelligence · Read-only access. Verify important business figures before acting on them.',
       working: 'Working…',
+      thinking: 'Thinking...',
       cancel: 'Cancel',
       confirm: 'Confirm',
       delete: 'Delete',
@@ -91,9 +92,10 @@
       meta_duration: '{s}s',
       meta_tools: 'Tools: {tools}',
       meta_tokens: '{n} tokens',
+      phase_thinking: 'Thinking...',
       phase_understanding: 'Understanding the question',
       phase_searching_entities: 'Finding relevant business data',
-      phase_reading_metadata: 'Checking available business fields',
+      phase_reading_metadata: 'Checking the available business information',
       phase_querying_d365: 'Retrieving business data',
       phase_analyzing_data: 'Analyzing business data',
       phase_preparing_response: 'Preparing the response',
@@ -110,7 +112,7 @@
       suggestion_4_title: 'Purchasing overview',
       suggestion_4_desc: 'Explore open orders and supplier activity',
       suggestion_4_prompt: 'Show open purchase orders for the Touch business.',
-      ai_not_configured: 'The AI provider is not configured on the server. Chat will fail until GROQ_API_KEY is set.',
+      ai_not_configured: 'The AI service is unavailable. Please try again shortly.',
       error_code: 'Error: {code}',
       offline: 'Offline',
       online: 'Online',
@@ -241,6 +243,7 @@
       send: 'إرسال الرسالة',
       disclaimer: 'ذكاء أعمال Touch · وصول للقراءة فقط. تحقق من الأرقام المهمة قبل اتخاذ أي إجراء.',
       working: 'جارٍ العمل…',
+      thinking: 'جارٍ التفكير...',
       cancel: 'إلغاء',
       confirm: 'تأكيد',
       delete: 'حذف',
@@ -279,9 +282,10 @@
       meta_duration: '{s} ثانية',
       meta_tools: 'الأدوات: {tools}',
       meta_tokens: '{n} رمز',
+      phase_thinking: 'جارٍ التفكير...',
       phase_understanding: 'فهم السؤال',
       phase_searching_entities: 'البحث في بيانات الأعمال المناسبة',
-      phase_reading_metadata: 'التحقق من حقول الأعمال المتاحة',
+      phase_reading_metadata: 'التحقق من معلومات الأعمال المتاحة',
       phase_querying_d365: 'استرجاع بيانات الأعمال',
       phase_analyzing_data: 'تحليل بيانات الأعمال',
       phase_preparing_response: 'إعداد الإجابة',
@@ -298,7 +302,7 @@
       suggestion_4_title: 'نظرة على المشتريات',
       suggestion_4_desc: 'تابع أوامر الشراء المفتوحة وحركة الموردين',
       suggestion_4_prompt: 'اعرض أوامر الشراء المفتوحة الخاصة بأعمال Touch.',
-      ai_not_configured: 'مزود الذكاء الاصطناعي غير مُعد على الخادم. ستفشل المحادثة حتى يتم ضبط GROQ_API_KEY.',
+      ai_not_configured: 'خدمة الذكاء الاصطناعي غير متاحة. يرجى المحاولة مرة أخرى قريبًا.',
       error_code: 'خطأ: {code}',
       offline: 'غير متصل',
       online: 'متصل',
@@ -2547,11 +2551,7 @@
     );
 
     const ai = health.ai;
-    const aiAvailable =
-      Boolean(ai && ai.configured) &&
-      (!Array.isArray(ai.providers) ||
-        ai.providers.length === 0 ||
-        ai.providers.some((provider) => provider.available));
+    const aiAvailable = Boolean(ai && ai.configured && ai.available);
     setStatus(
       dom.aiStatus,
       dom.aiStatusDot,
@@ -3064,12 +3064,6 @@
       meta.textContent = `${t('source_more', { operation: source.operation || 'query' })} · ${rowText}`;
       item.append(meta);
 
-      if (source.filter) {
-        const filter = document.createElement('span');
-        filter.className = 'source-meta';
-        filter.textContent = t('source_filter', { filter: source.filter });
-        item.append(filter);
-      }
       if (source.notes && source.notes.length > 0) {
         const note = document.createElement('span');
         note.className = 'source-note';
@@ -3087,9 +3081,11 @@
     const labelKey = `phase_${update.phase}`;
     const label = t(labelKey);
     dom.statusLabel.textContent = label;
-    dom.statusDetail.textContent = [update.tool, update.entitySet, update.detail].filter(Boolean).join(' · ');
+    // Tool names, entity names and query details are internal; the status
+    // panel only shows the business phase.
+    dom.statusDetail.textContent = '';
 
-    const key = `${update.phase}|${update.tool || ''}|${update.entitySet || ''}`;
+    const key = update.phase;
     const last = state.statusSteps[state.statusSteps.length - 1];
     if (!last || last.key !== key) {
       state.statusSteps.push({ key, label });
@@ -3192,16 +3188,41 @@
     setEmptyVisible(false);
     scrollToBottom(true);
 
+    let thinkingEl = null;
     state.sending = true;
     state.abort = new AbortController();
     state.statusSteps = [];
     updateComposer();
     dom.statusPanel.hidden = false;
-    dom.statusLabel.textContent = t('phase_understanding');
+    dom.statusLabel.textContent = t('phase_thinking');
     dom.statusDetail.textContent = '';
     dom.statusSteps.replaceChildren();
+
+    // Visible loading indicator in the chat itself, replaced by the answer.
+    thinkingEl = document.createElement('article');
+    thinkingEl.className = 'message assistant message-thinking';
+    thinkingEl.setAttribute('aria-live', 'polite');
+    const thinkingAvatar = document.createElement('div');
+    thinkingAvatar.className = 'message-avatar';
+    thinkingAvatar.setAttribute('aria-hidden', 'true');
+    thinkingAvatar.innerHTML = ICONS.assistant;
+    const thinkingBody = document.createElement('div');
+    thinkingBody.className = 'message-body';
+    const thinkingIndicator = document.createElement('div');
+    thinkingIndicator.className = 'thinking-indicator';
+    const thinkingSpinner = document.createElement('span');
+    thinkingSpinner.className = 'spinner';
+    thinkingSpinner.setAttribute('aria-hidden', 'true');
+    const thinkingLabel = document.createElement('span');
+    thinkingLabel.textContent = t('thinking');
+    thinkingIndicator.append(thinkingSpinner, thinkingLabel);
+    thinkingBody.append(thinkingIndicator);
+    thinkingEl.append(thinkingAvatar, thinkingBody);
+    dom.messages.append(thinkingEl);
+
     dom.input.value = '';
     updateComposer();
+    scrollToBottom(true);
 
     let ready = false;
     let finalConversation = null;
@@ -3330,6 +3351,7 @@
       state.sending = false;
       state.abort = null;
       hideStatus();
+      if (thinkingEl) thinkingEl.remove();
       updateComposer();
       if (finalConversation) {
         setEmptyVisible(false);

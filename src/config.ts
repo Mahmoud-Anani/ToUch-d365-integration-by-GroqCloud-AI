@@ -14,6 +14,8 @@ export interface D365Config {
   scope?: string;
   staticToken?: string;
   requestTimeoutMs: number;
+  /** Optional legal entity (dataAreaId) used to scope every ERP data request. */
+  dataArea?: string;
   pageSize: number;
   analyticsMaxRows: number;
   maxResponseBytes: number;
@@ -24,18 +26,32 @@ export interface D365Config {
   fieldDenylist: string[];
 }
 
+/**
+ * AI is local-only: a single Ollama provider on the loopback interface.
+ * Cloud provider keys, URLs and fallback lists are deliberately not read.
+ */
 export interface AIConfig {
-  apiKey?: string;
+  provider: 'ollama';
   baseUrl: string;
   model: string;
+  /** Human-readable GGUF name shown in the UI; does not affect inference. */
+  modelLabel: string;
+  /** Configured local model profiles; only the active entry is ever loaded. */
+  modelRegistry: LocalModelEntry[];
+  /** Model name currently in use from the registry. */
+  activeModel: string;
+  /** Kept for the existing health-status contract; always a single local entry. */
   providers: AIProviderConfig[];
-  primaryProvider: string;
-  providerOrder: string[];
-  fallbackEnabled: boolean;
+  primaryProvider: 'ollama';
+  providerOrder: ['ollama'];
+  fallbackEnabled: false;
   providerCooldownMs: number;
   providerMaxCooldownMs: number;
   temperature: number;
   timeoutMs: number;
+  numCtx: number;
+  thinking: boolean;
+  maxPromptChars: number;
   maxToolIterations: number;
   maxCompletionTokens: number;
   maxTurnCompletionTokens: number;
@@ -48,25 +64,43 @@ export interface AIConfig {
   enableReadOnly: boolean;
 }
 
+export type AITaskName =
+  | 'production_analysis'
+  | 'manufacturing_efficiency_analysis'
+  | 'waste_defect_detection'
+  | 'root_cause_analysis'
+  | 'general_question'
+  | 'data_summarization';
+
 export interface AIProviderConfig {
-  name: string;
-  apiKey?: string;
-  allowUnauthenticated?: boolean;
+  name: 'ollama';
   baseUrl: string;
   model: string;
   priority: number;
-  contextWindow?: number;
+  contextWindow: number;
+  supportsTools: true;
+  tasks: AITaskName[];
+  freeTier: 'verified';
+}
+
+/**
+ * A local model profile. Multiple profiles may be configured for future
+ * task-specific routing, but exactly one is active and loaded at a time.
+ * No profile can point to a cloud endpoint.
+ */
+export interface LocalModelEntry {
+  model: string;
+  label: string;
+  /** Responsibility this profile is intended for; informational only. */
+  role: string;
+  enabled: boolean;
+  timeoutMs: number;
+  temperature: number;
+  contextWindow: number;
   supportsTools: boolean;
-  tasks: Array<
-    | 'production_analysis'
-    | 'manufacturing_efficiency_analysis'
-    | 'waste_defect_detection'
-    | 'root_cause_analysis'
-    | 'general_question'
-    | 'data_summarization'
-  >;
-  freeTier: 'verified' | 'unknown' | 'paid';
-  maxTokenParameter: 'max_tokens' | 'max_completion_tokens';
+  /** Priority among local profiles if a future run selects another one. */
+  priority: number;
+  tasks: AITaskName[];
 }
 
 export interface ConversationConfig {
@@ -153,180 +187,166 @@ function list(env: EnvLike, name: string): string[] {
     .filter(Boolean);
 }
 
-function aiFallbackProviders(env: EnvLike): AIProviderConfig[] {
-  const raw = str(env, 'AI_FALLBACK_PROVIDERS');
-  if (!raw) return [];
+const LEGACY_CLOUD_AI_VARS = [
+  'GROQ_API_KEY',
+  'GEMINI_API_KEY',
+  'CEREBRAS_API_KEY',
+  'SAMBANOVA_API_KEY',
+  'OPENROUTER_API_KEY',
+  'HUGGINGFACE_API_KEY',
+  'AI_FALLBACK_PROVIDERS',
+  'AI_PRIMARY_PROVIDER',
+  'AI_PROVIDER_ORDER',
+  'AI_FALLBACK_ENABLED',
+];
+
+function warnAboutLegacyAIConfig(env: EnvLike, warnings: string[]): void {
+  const present = LEGACY_CLOUD_AI_VARS.filter((name) => str(env, name) !== '');
+  if (present.length > 0) {
+    warnings.push(
+      `Ignoring cloud AI settings (${present.join(', ')}). Ollama is the only AI inference provider.`,
+    );
+  }
+  if (str(env, 'AI_PROVIDER') && str(env, 'AI_PROVIDER').toLowerCase() !== 'ollama') {
+    warnings.push(
+      `AI_PROVIDER="${str(env, 'AI_PROVIDER')}" is ignored; Ollama is the only supported AI provider.`,
+    );
+  }
+}
+
+/** Resolve and strictly validate the loopback-only Ollama endpoint. */
+export function ollamaBaseUrl(raw: string): string {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new Error('OLLAMA_BASE_URL must be an absolute URL.');
+  }
+  const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+  if ((url.protocol !== 'http:' && url.protocol !== 'https:') || !loopback) {
+    throw new Error('OLLAMA_BASE_URL must point to a loopback Ollama daemon (http://127.0.0.1:11434).');
+  }
+  if (url.username || url.password || url.search || url.hash) {
+    throw new Error('OLLAMA_BASE_URL must not contain credentials, a query string or a fragment.');
+  }
+  return `${url.origin}${url.pathname.replace(/\/+$/, '')}`;
+}
+
+const ALL_AI_TASKS: AITaskName[] = [
+  'production_analysis',
+  'manufacturing_efficiency_analysis',
+  'waste_defect_detection',
+  'root_cause_analysis',
+  'general_question',
+  'data_summarization',
+];
+
+function validModelName(value: string, source: string): string {
+  if (!/^[A-Za-z0-9._:-]{1,128}$/.test(value)) {
+    throw new Error(`${source} must contain only letters, digits, dots, underscores, colons or hyphens.`);
+  }
+  return value;
+}
+
+function clampNumber(value: unknown, min: number, max: number, fallback: number): number {
+  const numeric = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(numeric) ? clamp(Math.trunc(numeric), min, max) : fallback;
+}
+
+/**
+ * Parses the optional local model registry. Profiles only describe loopback
+ * Ollama models; they never introduce a cloud endpoint or a second running
+ * inference process.
+ */
+function modelRegistryFromEnv(env: EnvLike, warnings: string[]): LocalModelEntry[] {
+  const fallbackModel = validModelName(str(env, 'OLLAMA_MODEL', 'd365-local'), 'OLLAMA_MODEL');
+  const fallbackCtx = clamp(int(env, 'OLLAMA_NUM_CTX', 32_768), 2_048, 262_144);
+  const raw = str(env, 'AI_MODEL_REGISTRY');
+  if (!raw) {
+    return [
+      {
+        model: fallbackModel,
+        label: str(env, 'OLLAMA_MODEL_LABEL') || fallbackModel,
+        role: 'generalist',
+        enabled: true,
+        timeoutMs: clamp(int(env, 'OLLAMA_TIMEOUT', 120_000), 1_000, 600_000),
+        temperature: Math.min(2, Math.max(0, Number(str(env, 'OLLAMA_TEMPERATURE', '0.2')) || 0.2)),
+        contextWindow: fallbackCtx,
+        supportsTools: true,
+        priority: 0,
+        tasks: [...ALL_AI_TASKS],
+      },
+    ];
+  }
 
   let parsed: unknown;
   try {
-    parsed = JSON.parse(raw) as unknown;
+    parsed = JSON.parse(raw);
   } catch {
-    throw new Error('AI_FALLBACK_PROVIDERS must be a JSON array of provider configurations.');
+    throw new Error('AI_MODEL_REGISTRY must be a JSON array of local model profiles.');
   }
-  if (!Array.isArray(parsed)) {
-    throw new Error('AI_FALLBACK_PROVIDERS must be a JSON array of provider configurations.');
+  if (!Array.isArray(parsed) || parsed.length === 0 || parsed.length > 8) {
+    throw new Error('AI_MODEL_REGISTRY must contain between 1 and 8 local model profiles.');
   }
-
-  return parsed.map((entry, index) => {
-    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
-      throw new Error(`AI_FALLBACK_PROVIDERS entry ${index + 1} must be an object.`);
+  const seen = new Set<string>();
+  const entries: LocalModelEntry[] = [];
+  for (const [index, item] of parsed.entries()) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      throw new Error(`AI_MODEL_REGISTRY[${index}] must be an object.`);
     }
-    const item = entry as Record<string, unknown>;
-    const apiKey = typeof item.apiKey === 'string' ? item.apiKey.trim() : '';
-    const model = typeof item.model === 'string' ? item.model.trim() : '';
-    const rawBaseUrl = typeof item.baseUrl === 'string' ? item.baseUrl.trim() : '';
-    const name =
-      typeof item.name === 'string' && item.name.trim()
-        ? item.name.trim()
-        : `fallback-${index + 1}`;
-    if (!model || !rawBaseUrl) {
-      throw new Error(`AI_FALLBACK_PROVIDERS entry ${index + 1} requires baseUrl and model.`);
-    }
-
-    let url: URL;
-    try {
-      url = new URL(rawBaseUrl);
-    } catch {
-      throw new Error(`AI_FALLBACK_PROVIDERS entry ${index + 1} baseUrl must be an absolute URL.`);
-    }
-    const localHttp =
-      url.protocol === 'http:' &&
-      (url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '[::1]');
-    if (
-      (url.protocol !== 'https:' && !localHttp) ||
-      url.username ||
-      url.password ||
-      url.search ||
-      url.hash
-    ) {
-      throw new Error(
-        `AI_FALLBACK_PROVIDERS entry ${index + 1} baseUrl must use HTTPS and contain no credentials, query, or fragment.`,
-      );
-    }
-    if (!apiKey && !localHttp) {
-      throw new Error(
-        `AI_FALLBACK_PROVIDERS entry ${index + 1} requires an API key unless it uses a local HTTP endpoint.`,
-      );
-    }
-    const taskValues = Array.isArray(item.tasks) ? item.tasks : [];
-    const tasks = taskValues.filter(
-      (task): task is AIProviderConfig['tasks'][number] =>
-        task === 'production_analysis' ||
-        task === 'manufacturing_efficiency_analysis' ||
-        task === 'waste_defect_detection' ||
-        task === 'root_cause_analysis' ||
-        task === 'general_question' ||
-        task === 'data_summarization',
-    );
-    const contextWindow =
-      typeof item.contextWindow === 'number' && Number.isSafeInteger(item.contextWindow)
-        ? clamp(item.contextWindow, 256, 2_000_000)
-        : undefined;
-    const freeTier =
-      item.freeTier === 'verified' || item.freeTier === 'paid' ? item.freeTier : 'unknown';
-    return {
-      name,
-      apiKey: apiKey || undefined,
-      allowUnauthenticated: localHttp,
-      baseUrl: rawBaseUrl.replace(/\/+$/, ''),
+    const record = item as Record<string, unknown>;
+    const modelValue = typeof record.model === 'string' ? record.model.trim() : '';
+    if (!modelValue) throw new Error(`AI_MODEL_REGISTRY[${index}].model is required.`);
+    const model = validModelName(modelValue, `AI_MODEL_REGISTRY[${index}].model`);
+    if (seen.has(model)) throw new Error(`AI_MODEL_REGISTRY contains duplicate model "${model}".`);
+    seen.add(model);
+    const labelValue = typeof record.label === 'string' ? record.label.trim().slice(0, 100) : '';
+    const roleValue = typeof record.role === 'string' ? record.role.trim().slice(0, 100) : '';
+    const tasks = Array.isArray(record.tasks)
+      ? record.tasks.filter((task): task is AITaskName => ALL_AI_TASKS.includes(task as AITaskName))
+      : [...ALL_AI_TASKS];
+    entries.push({
       model,
-      priority: typeof item.priority === 'number' ? item.priority : 100 + index,
-      ...(contextWindow ? { contextWindow } : {}),
-      supportsTools: item.supportsTools === true,
-      tasks: tasks.length > 0 ? tasks : [
-        'production_analysis',
-        'manufacturing_efficiency_analysis',
-        'waste_defect_detection',
-        'root_cause_analysis',
-        'general_question',
-        'data_summarization',
-      ],
-      freeTier,
-      maxTokenParameter: item.maxTokenParameter === 'max_tokens' ? 'max_tokens' : 'max_completion_tokens',
-    };
-  });
+      label: labelValue || model,
+      role: roleValue || 'generalist',
+      enabled: record.enabled === undefined ? true : record.enabled === true,
+      timeoutMs: clampNumber(record.timeoutMs, 1_000, 600_000, clamp(int(env, 'OLLAMA_TIMEOUT', 120_000), 1_000, 600_000)),
+      temperature: (() => {
+        const raw = typeof record.temperature === 'number' ? record.temperature : Number(record.temperature);
+        const fallback = Number(str(env, 'OLLAMA_TEMPERATURE', '0.2')) || 0.2;
+        return Number.isFinite(raw) ? Math.min(2, Math.max(0, raw)) : fallback;
+      })(),
+      contextWindow: clampNumber(record.contextWindow, 2_048, 262_144, fallbackCtx),
+      supportsTools: record.supportsTools === undefined ? true : record.supportsTools === true,
+      priority: clampNumber(record.priority, 0, 100, index),
+      tasks: tasks.length > 0 ? tasks : [...ALL_AI_TASKS],
+    });
+  }
+  entries.sort((a, b) => a.priority - b.priority);
+  const enabled = entries.filter((entry) => entry.enabled);
+  if (enabled.length === 0) throw new Error('AI_MODEL_REGISTRY has no enabled local model profiles.');
+  warnings.push(
+    `Loaded ${enabled.length} enabled local model profile(s); only the active model is loaded for inference.`,
+  );
+  return enabled;
 }
 
-function configuredAIProviders(
+function configuredOllamaProvider(
   env: EnvLike,
-  fallbackProviders: AIProviderConfig[],
-  providerOrder: string[],
-): AIProviderConfig[] {
-  const definitions = [
-    { name: 'groq', apiKey: 'GROQ_API_KEY', model: 'GROQ_MODEL', url: 'GROQ_BASE_URL', tools: 'GROQ_SUPPORTS_TOOLS', defaultTools: true, defaultUrl: 'https://api.groq.com/openai/v1', tokenParameter: 'max_completion_tokens' as const },
-    { name: 'gemini', apiKey: 'GEMINI_API_KEY', model: 'GEMINI_MODEL', url: 'GEMINI_BASE_URL', tools: 'GEMINI_SUPPORTS_TOOLS', defaultTools: false, defaultUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', tokenParameter: 'max_tokens' as const },
-    { name: 'cerebras', apiKey: 'CEREBRAS_API_KEY', model: 'CEREBRAS_MODEL', url: 'CEREBRAS_BASE_URL', tools: 'CEREBRAS_SUPPORTS_TOOLS', defaultTools: false, defaultUrl: 'https://api.cerebras.ai/v1', tokenParameter: 'max_completion_tokens' as const },
-    { name: 'sambanova', apiKey: 'SAMBANOVA_API_KEY', model: 'SAMBANOVA_MODEL', url: 'SAMBANOVA_BASE_URL', tools: 'SAMBANOVA_SUPPORTS_TOOLS', defaultTools: false, defaultUrl: 'https://api.sambanova.ai/v1', tokenParameter: 'max_tokens' as const },
-    { name: 'openrouter', apiKey: 'OPENROUTER_API_KEY', model: 'OPENROUTER_MODEL', url: 'OPENROUTER_BASE_URL', tools: 'OPENROUTER_SUPPORTS_TOOLS', defaultTools: false, defaultUrl: 'https://openrouter.ai/api/v1', tokenParameter: 'max_tokens' as const },
-    { name: 'huggingface', apiKey: 'HUGGINGFACE_API_KEY', model: 'HUGGINGFACE_MODEL', url: 'HUGGINGFACE_BASE_URL', tools: 'HUGGINGFACE_SUPPORTS_TOOLS', defaultTools: false, defaultUrl: 'https://router.huggingface.co/v1', tokenParameter: 'max_tokens' as const },
-  ];
-  const providers: AIProviderConfig[] = [];
-
-  for (const definition of definitions) {
-    const apiKey = str(env, definition.apiKey);
-    const model = str(
-      env,
-      definition.model,
-      definition.name === 'groq' ? 'openai/gpt-oss-120b' : '',
-    );
-    if (!apiKey) continue;
-    if (!model) {
-      throw new Error(`${definition.model} is required when ${definition.apiKey} is configured.`);
-    }
-    const baseUrl = str(env, definition.url, definition.defaultUrl).replace(/\/+$/, '');
-    let parsedBaseUrl: URL;
-    try {
-      parsedBaseUrl = new URL(baseUrl);
-    } catch {
-      throw new Error(`${definition.url} must be an absolute HTTPS URL.`);
-    }
-    const localHttp =
-      parsedBaseUrl.protocol === 'http:' &&
-      ['localhost', '127.0.0.1', '[::1]'].includes(parsedBaseUrl.hostname);
-    if (
-      (parsedBaseUrl.protocol !== 'https:' && !localHttp) ||
-      parsedBaseUrl.username ||
-      parsedBaseUrl.password ||
-      parsedBaseUrl.search ||
-      parsedBaseUrl.hash
-    ) {
-      throw new Error(`${definition.url} must use HTTPS without embedded credentials or query values.`);
-    }
-    providers.push({
-      name: definition.name,
-      apiKey,
-      model,
-      baseUrl,
-      allowUnauthenticated: localHttp,
-      priority: providerOrder.indexOf(definition.name) === -1
-        ? providerOrder.length + providers.length
-        : providerOrder.indexOf(definition.name),
-      supportsTools: bool(env, definition.tools, definition.defaultTools),
-      tasks: [
-        'production_analysis',
-        'manufacturing_efficiency_analysis',
-        'waste_defect_detection',
-        'root_cause_analysis',
-        'general_question',
-        'data_summarization',
-      ],
-      freeTier: 'unknown',
-      maxTokenParameter: definition.tokenParameter,
-    });
-  }
-
-  for (const fallback of fallbackProviders) {
-    providers.push({
-      ...fallback,
-      allowUnauthenticated: fallback.allowUnauthenticated ?? false,
-      priority:
-        providerOrder.indexOf(fallback.name) === -1
-          ? fallback.priority
-          : providerOrder.indexOf(fallback.name),
-    });
-  }
-
-  return providers.sort((left, right) => left.priority - right.priority);
+  model: string,
+  contextWindow: number,
+): AIProviderConfig {
+  const baseUrl = ollamaBaseUrl(str(env, 'OLLAMA_BASE_URL', 'http://127.0.0.1:11434'));
+  return {
+    name: 'ollama',
+    baseUrl,
+    model,
+    priority: 0,
+    contextWindow,
+    supportsTools: true,
+    tasks: [...ALL_AI_TASKS],
+    freeTier: 'verified',
+  };
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -462,30 +482,20 @@ export function createConfig(env: EnvLike = process.env): AppConfig {
     );
   }
 
-  const aiKey = str(env, 'GROQ_API_KEY');
-  const fallbackProviders = aiFallbackProviders(env);
-  const providerOrderRaw = list(env, 'AI_PROVIDER_ORDER');
-  const providerOrder = [
-    str(env, 'AI_PRIMARY_PROVIDER', 'groq').toLowerCase(),
-    ...(
-      providerOrderRaw.length > 0
-        ? providerOrderRaw.map((provider) => provider.toLowerCase())
-        : ['groq', 'gemini', 'cerebras', 'sambanova', 'openrouter', 'huggingface', 'ollama']
-    ),
-  ].filter((provider, index, providers) => providers.indexOf(provider) === index);
-  const providers = configuredAIProviders(env, fallbackProviders, providerOrder);
-  if (providers.length === 0) {
-    warnings.push(
-      'No AI provider is configured; set a provider API key/model or configure AI_FALLBACK_PROVIDERS.',
-    );
-  } else if (!providers.some((provider) => provider.name === providerOrder[0])) {
-    warnings.push(
-      `AI_PRIMARY_PROVIDER "${providerOrder[0]}" is not configured; using "${providers[0]!.name}" instead.`,
-    );
+  warnAboutLegacyAIConfig(env, warnings);
+  const registry = modelRegistryFromEnv(env, warnings);
+  const activeRaw = str(env, 'AI_ACTIVE_MODEL') || str(env, 'OLLAMA_MODEL') || registry[0]!.model;
+  const activeEntry = registry.find((entry) => entry.model === activeRaw);
+  if (!activeEntry) {
+    if (str(env, 'AI_ACTIVE_MODEL')) {
+      throw new Error(`AI_ACTIVE_MODEL "${activeRaw}" is not an enabled entry in AI_MODEL_REGISTRY.`);
+    }
+    warnings.push(`OLLAMA_MODEL="${activeRaw}" is not in AI_MODEL_REGISTRY; using "${registry[0]!.model}".`);
   }
-  if (!baseUrl) {
-    // Already warned above.
-  }
+  const active = activeEntry ?? registry[0]!;
+  const ollamaProvider = configuredOllamaProvider(env, active.model, active.contextWindow);
+  // Exactly one AI provider: the local Ollama daemon. No cloud fallback path.
+  const providers: AIProviderConfig[] = [ollamaProvider];
 
   const cacheDir = path.resolve(str(env, 'METADATA_CACHE_DIR', 'data'));
   const conversationStore = str(env, 'CONVERSATION_STORE', 'file').toLowerCase();
@@ -514,7 +524,8 @@ export function createConfig(env: EnvLike = process.env): AppConfig {
 
   const config: AppConfig = {
     env: nodeEnv,
-    port: clamp(int(env, 'PORT', 3000), 1, 65535),    logLevel: (str(env, 'LOG_LEVEL', 'info') as LogLevel) ?? 'info',
+    port: clamp(int(env, 'PORT', 3000), 1, 65535),
+    logLevel: (str(env, 'LOG_LEVEL', 'info') as LogLevel) ?? 'info',
     requestBodyLimit: str(env, 'REQUEST_BODY_LIMIT', '128kb'),
     trustProxy: bool(env, 'TRUST_PROXY', false),
     app: {
@@ -533,6 +544,10 @@ export function createConfig(env: EnvLike = process.env): AppConfig {
       scope: scope || undefined,
       staticToken: staticToken || undefined,
       requestTimeoutMs: clamp(int(env, 'D365_REQUEST_TIMEOUT_MS', 60_000), 1_000, 300_000),
+      ...(() => {
+        const value = str(env, 'D365_DATA_AREA').trim();
+        return value && /^[A-Za-z0-9_-]{1,32}$/.test(value) ? { dataArea: value } : {};
+      })(),
       pageSize: clamp(int(env, 'D365_PAGE_SIZE', 500), 1, 5_000),
       analyticsMaxRows: clamp(int(env, 'D365_ANALYTICS_MAX_ROWS', 5_000), 1, 100_000),
       maxResponseBytes: clamp(int(env, 'D365_MAX_RESPONSE_BYTES', 10 * 1024 * 1024), 64 * 1024, 200 * 1024 * 1024),
@@ -543,22 +558,26 @@ export function createConfig(env: EnvLike = process.env): AppConfig {
       fieldDenylist: list(env, 'D365_FIELD_DENYLIST'),
     },
     ai: {
-      apiKey: aiKey || undefined,
-      baseUrl: str(env, 'GROQ_BASE_URL', 'https://api.groq.com/openai/v1').replace(/\/+$/, ''),
-      model: str(env, 'GROQ_MODEL', 'openai/gpt-oss-120b'),
+      provider: 'ollama',
+      baseUrl: ollamaProvider.baseUrl,
+      model: active.model,
+      modelLabel:
+        str(env, 'OLLAMA_MODEL_LABEL') ||
+        (str(env, 'AI_MODEL_REGISTRY') ? active.label : 'AI assistant'),
+      modelRegistry: registry,
+      activeModel: active.model,
       providers,
-      primaryProvider: providers[0]?.name ?? providerOrder[0] ?? 'groq',
-      providerOrder,
-      fallbackEnabled: bool(env, 'AI_FALLBACK_ENABLED', true),
+      primaryProvider: 'ollama',
+      providerOrder: ['ollama'],
+      fallbackEnabled: false,
       providerCooldownMs: clamp(int(env, 'AI_PROVIDER_COOLDOWN_MS', 5_000), 1_000, 300_000),
       providerMaxCooldownMs: clamp(int(env, 'AI_PROVIDER_MAX_COOLDOWN_MS', 300_000), 10_000, 3_600_000),
-      temperature: Math.min(2, Math.max(0, Number(str(env, 'GROQ_TEMPERATURE', '0.2')) || 0.2)),
-      timeoutMs: clamp(
-        int(env, 'AI_REQUEST_TIMEOUT', int(env, 'GROQ_TIMEOUT_MS', 30_000)),
-        1_000,
-        300_000,
-      ),
-      maxCompletionTokens: clamp(int(env, 'GROQ_MAX_COMPLETION_TOKENS', 1_024), 256, 8_192),
+      temperature: active.temperature,
+      timeoutMs: active.timeoutMs,
+      numCtx: active.contextWindow,
+      thinking: bool(env, 'OLLAMA_THINKING', false),
+      maxPromptChars: clamp(int(env, 'OLLAMA_MAX_PROMPT_CHARS', 150_000), 4_000, 1_000_000),
+      maxCompletionTokens: clamp(int(env, 'OLLAMA_MAX_COMPLETION_TOKENS', 1_024), 256, 8_192),
       maxTurnCompletionTokens: clamp(
         int(env, 'AI_MAX_TURN_COMPLETION_TOKENS', 4_096),
         512,

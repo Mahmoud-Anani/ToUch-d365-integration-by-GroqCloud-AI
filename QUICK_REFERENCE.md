@@ -135,9 +135,11 @@ D365_CLIENT_ID=your-client-id
 D365_CLIENT_SECRET=your-secret
 D365_TENANT_ID=your-tenant-id
 
-# AI Provider (Required for chat)
-GROQ_API_KEY=your-groq-key
-GROQ_MODEL=openai/gpt-oss-120b
+# AI Provider (local Ollama; register once with: ollama create d365-local -f Modelfile)
+AI_PROVIDER=ollama
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+OLLAMA_MODEL=d365-local
+OLLAMA_TIMEOUT=120000
 
 # Analytics (Optional - shown with defaults)
 D365_ANALYTICS_MAX_ROWS=5000
@@ -295,7 +297,7 @@ npm run lint            # Run ESLint
 
 # Diagnostics
 npm run smoke:d365      # Test D365 connection
-npm run smoke:groq      # Test AI provider
+npm run smoke:ollama    # Test local AI provider
 ```
 
 ---

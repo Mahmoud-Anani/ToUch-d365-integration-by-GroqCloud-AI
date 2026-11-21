@@ -1148,6 +1148,23 @@ html[dir="rtl"] .message.user .message-body {
   animation: spin 0.8s linear infinite;
 }
 
+.thinking-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text-soft);
+  font-size: 12.5px;
+  box-shadow: var(--shadow-soft);
+}
+
+.message-thinking .message-body {
+  opacity: 0.92;
+}
+
 /* Composer */
 .composer-wrap {
   padding: 8px clamp(14px, 3vw, 28px) max(12px, env(safe-area-inset-bottom));

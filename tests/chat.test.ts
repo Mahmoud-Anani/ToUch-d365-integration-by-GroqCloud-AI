@@ -370,13 +370,13 @@ describe('ChatService turn generation and completion', () => {
     );
   });
 
-  it('persists the assistant message with attachments, sources and metadata', async () => {
+  it('keeps ERP evidence server-side and returns only the decision brief', async () => {
     const result = agentResult({
       attachments: [
         {
           type: 'metric',
           id: 'm1',
-          title: 'Count',
+          title: 'Count · CustomersV3',
           items: [{ label: 'Records', value: '12' }],
         },
       ],
@@ -386,13 +386,19 @@ describe('ChatService turn generation and completion', () => {
           entityType: 'CustomerV3',
           operation: 'count',
           complete: true,
+          notes: [
+            'Analysis covers last 6 month(s) by default; state this period in the answer.',
+            'The ERP did not accept the requested server-side filter. A bounded scan of real records was applied locally.',
+            'Only a bounded portion of matching records was scanned; figures must be described as partial.',
+            'No records matched this request. This is a genuine no-record result, not a failed request.',
+          ],
         },
       ],
       usage: { promptTokens: 1, completionTokens: 2, totalTokens: 3 },
       dataContext: [contextEntry()],
     });
-    const fake = fakeAgent(result);
-    const { service, logger } = makeService(memoryStore(), fake.agent);
+    const store = memoryStore();
+    const { service, logger } = makeService(store, fakeAgent(result).agent);
     const turn = await service.startTurn({ userId: 'user-a', message: 'How many?' });
 
     const publicConversation = await service.completeTurn(turn, result);
@@ -402,20 +408,44 @@ describe('ChatService turn generation and completion', () => {
     expect(assistant).toMatchObject({
       role: 'assistant',
       content: 'There are 12 customers.',
-      attachments: result.attachments,
-      sources: result.sources,
-      meta: {
-        model: 'fake-model',
-        iterations: 2,
-        toolsUsed: ['analyzeData'],
-        usage: { promptTokens: 1, completionTokens: 2, totalTokens: 3 },
-        complete: true,
-      },
     });
-    expect(publicConversation.messages[0]).not.toHaveProperty('dataContext');
+    expect(assistant?.attachments).toEqual([
+      { type: 'metric', id: 'm1', title: 'Count', items: [{ label: 'Records', value: '12' }] },
+    ]);
+    expect(assistant?.sources?.[0]).toMatchObject({
+      entitySet: 'Business records',
+      entityType: 'Business records',
+      operation: 'Business records checked',
+      complete: true,
+      notes: [
+        'Figures cover last 6 month(s).',
+        'Figures come from a partial review of available records.',
+        'No records matched this request.',
+      ],
+    });
+    expect(assistant).not.toHaveProperty('meta');
+    expect(JSON.stringify(publicConversation)).not.toMatch(/CustomersV3|CustomerV3|analyzeData|promptTokens/i);
+
+    // The full evidence remains stored for audit, memory and follow-up turns.
+    const stored = await store.get('user-a', turn.conversation.id);
+    expect(stored?.messages[1]?.sources).toEqual(result.sources);
+    expect(stored?.messages[1]?.meta?.toolsUsed).toEqual(['analyzeData']);
+    expect(stored?.dataContext).toEqual(result.dataContext);
+
     expect(logger.audit).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'chat.turn', outcome: 'success', userRef: 'user-a' }),
     );
+  });
+
+  it('exposes a partial-data flag without technical metadata', async () => {
+    const result = agentResult({ complete: false, toolsUsed: ['queryEntity'] });
+    const { service } = makeService(memoryStore(), fakeAgent(result).agent);
+    const turn = await service.startTurn({ userId: 'user-a', message: 'How many?' });
+
+    const publicConversation = await service.completeTurn(turn, result);
+
+    expect(publicConversation.messages[1]?.meta).toEqual({ complete: false });
+    expect(JSON.stringify(publicConversation)).not.toMatch(/queryEntity|fake-model/i);
   });
 
   it('merges and de-duplicates data context, keeping the newest five entries', async () => {

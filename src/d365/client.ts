@@ -25,12 +25,21 @@ export interface PageScanOptions {
   signal?: AbortSignal;
 }
 
+export interface ODataRequestDiagnostic {
+  url: string;
+  status: number;
+  rows: number;
+  page: number;
+}
+
 export interface PageScan {
   rows: Record<string, unknown>[];
   complete: boolean;
   totalMatches?: number;
   pages: number;
   scanned: number;
+  /** Redacted request trail for diagnostics; never includes headers or tokens. */
+  requests?: ODataRequestDiagnostic[];
 }
 
 const ENTITY_SET_PATTERN = /^[A-Za-z][A-Za-z0-9_]{0,199}$/;
@@ -272,6 +281,7 @@ export class D365Client {
     let totalMatches: number | undefined;
     let nextLink: string | undefined;
     const visited = new Set<string>();
+    const requests: ODataRequestDiagnostic[] = [];
     const maxPages = Math.ceil(options.maxRows / Math.max(1, options.pageSize)) + 2;
 
     const baseParams = new URLSearchParams(params);
@@ -306,6 +316,12 @@ export class D365Client {
       const value = response.data?.value;
       const pageRows = Array.isArray(value) ? (value as Record<string, unknown>[]) : [];
       pages += 1;
+      requests.push({
+        url: response.url,
+        status: response.status,
+        rows: pageRows.length,
+        page: pages,
+      });
 
       if (pageRows.length === 0) {
         complete = true;
@@ -336,7 +352,7 @@ export class D365Client {
 
     if (rows.length === 0 && totalMatches === 0) complete = true;
 
-    return { rows, complete, totalMatches, pages, scanned: rows.length };
+    return { rows, complete, totalMatches, pages, scanned: rows.length, requests };
   }
 
   /** Uses $count=true for fast, exact count without downloading records. */
@@ -423,7 +439,11 @@ export class D365Client {
           details: { reason: 'TIMEOUT' },
         });
       }
-      this.options.logger?.warn('D365 network error', { error: (error as Error).name });
+      this.options.logger?.warn('D365 network error', {
+        error: (error as Error).name,
+        method: 'GET',
+        url: truncate(url, 1_500),
+      });
       throw new D365Error({
         publicMessage: 'Unable to reach Dynamics 365. Check network connectivity and the environment URL.',
         message: 'D365 network error',
@@ -450,6 +470,8 @@ export class D365Client {
       const odata = extractODataError(payload);
       this.options.logger?.warn('D365 OData request failed', {
         status: response.status,
+        method: 'GET',
+        url: truncate(url, 1_500),
         odataCode: odata.code,
         odataType: odata.type,
       });
@@ -463,7 +485,7 @@ export class D365Client {
           publicMessage:
             'Dynamics 365 rejected the access token. Verify the integration application and its D365 permissions.',
           message: 'D365 returned 401 after token refresh',
-          details: { upstreamStatus: 401 },
+          details: { upstreamStatus: 401, url: truncate(url, 1_500) },
         });
       }
       if (response.status === 403) {
@@ -471,14 +493,14 @@ export class D365Client {
           publicMessage:
             'The D365 integration identity is not permitted to access this data. Contact your D365 administrator.',
           message: 'D365 returned 403',
-          details: { upstreamStatus: 403 },
+          details: { upstreamStatus: 403, url: truncate(url, 1_500) },
         });
       }
       if (response.status === 404) {
         throw new D365Error({
           publicMessage: 'The requested D365 entity set or record was not found.',
           message: 'D365 returned 404',
-          details: { upstreamStatus: 404 },
+          details: { upstreamStatus: 404, url: truncate(url, 1_500) },
         });
       }
       if (response.status === 429) {
@@ -488,7 +510,7 @@ export class D365Client {
           code: 'D365_UPSTREAM_ERROR',
           publicMessage: 'Dynamics 365 is throttling requests. Please retry shortly.',
           retryAfterSeconds: Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 10,
-          details: { upstreamStatus: 429 },
+          details: { upstreamStatus: 429, url: truncate(url, 1_500) },
         });
       }
       if (response.status === 400) {
@@ -496,13 +518,13 @@ export class D365Client {
         throw new D365Error({
           publicMessage: `D365 rejected the query: ${safeMessage}`,
           message: 'D365 returned 400',
-          details: { upstreamStatus: 400, odataCode: odata.code },
+          details: { upstreamStatus: 400, odataCode: odata.code, url: truncate(url, 1_500) },
         });
       }
       throw new D365Error({
         publicMessage: 'Dynamics 365 returned an error. Please try again later.',
         message: `D365 returned ${response.status}`,
-        details: { upstreamStatus: response.status },
+        details: { upstreamStatus: response.status, url: truncate(url, 1_500) },
       });
     }
 

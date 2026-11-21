@@ -4,6 +4,7 @@ import { MetadataError } from '../errors';
 import type { Logger } from '../logger';
 import type { D365Client } from '../d365/client';
 import { MetadataCatalog } from './catalog';
+import { resolveBusinessEntities, type BusinessResolution } from './business';
 import { parseCsdlMetadata } from './parser';
 import type { EntityMetadata, EntitySearchResult, MetadataCatalogData, RelatedEntity } from './types';
 
@@ -95,6 +96,17 @@ export class MetadataService {
   async getEntity(name: string): Promise<EntityMetadata | undefined> {
     const catalog = await this.getCatalog();
     return catalog.getEntity(name);
+  }
+
+  /**
+   * Business-domain discovery over the verified catalog. Combines the existing
+   * metadata search with Arabic/English terminology signals so callers can find
+   * the right fact entity without hardcoding entity names.
+   */
+  async resolveBusiness(question: string, limit = 8): Promise<BusinessResolution> {
+    const catalog = await this.getCatalog();
+    const searchResults = catalog.search(question, 25);
+    return resolveBusinessEntities(catalog.data, question, { limit, searchResults });
   }
 
   async getSchema(
